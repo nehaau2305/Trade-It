@@ -10,8 +10,62 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Register Land"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/layout"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/layout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toTopOf="@+id/layout2"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView3">
+
+        <EditText
+            android:id="@+id/nameEditText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Name" />
+
+        <EditText
+            android:id="@+id/emailEditText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Email" />
+
+        <EditText
+            android:id="@+id/passwEditText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Password" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/layout">
+
+        <Button
+            android:id="@+id/registerButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sign Up" />
+
+        <Button
+            android:id="@+id/navLoginButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Back to Login" />
+    </LinearLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
