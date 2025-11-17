@@ -29,19 +29,19 @@
             android:id="@+id/nameEditText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Name" />
+            android:hint="Name" />
 
         <EditText
             android:id="@+id/emailEditText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Email" />
+            android:hint="Email" />
 
         <EditText
             android:id="@+id/passwEditText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Password" />
+            android:hint="Password" />
 
     </LinearLayout>
 

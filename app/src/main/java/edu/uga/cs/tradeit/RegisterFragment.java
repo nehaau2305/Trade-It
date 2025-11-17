@@ -14,6 +14,8 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
+import java.net.PasswordAuthentication;
+
 public class RegisterFragment extends Fragment {
 
     //variables
@@ -59,10 +61,10 @@ public class RegisterFragment extends Fragment {
             nameInput.setError("Name Required");
         }
         if (email.isEmpty()) {
-            nameInput.setError("Email Required");
+            emailInput.setError("Email Required");
         }
         if (password.isEmpty()) {
-            nameInput.setError("Password Required");
+            passwInput.setError("Password Required");
         }
 
         // disable buttons while loading
