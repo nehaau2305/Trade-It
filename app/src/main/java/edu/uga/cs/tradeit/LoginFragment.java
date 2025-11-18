@@ -1,5 +1,6 @@
 package edu.uga.cs.tradeit;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -71,7 +72,11 @@ public class LoginFragment extends Fragment {
 
                     if (task.isSuccessful()) {
                         Toast.makeText(getContext(), "Login Successful", Toast.LENGTH_SHORT).show();
-                        //NAVIGATE TO AUTHENTICATED HOME PAGE
+                        Intent intent = new Intent(getActivity(), UserActivity.class);
+                        // to prevent user from going back to login page
+                        intent.putExtra("fragmentType", "Home");
+                        startActivity(intent);
+                        getActivity().finish();
                     } else {
                         Toast.makeText(getContext(), "Login Unsuccessful" + task.getException().getMessage(), Toast.LENGTH_LONG).show();
                     }

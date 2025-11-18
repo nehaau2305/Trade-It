@@ -27,6 +27,10 @@
             android:name=".AuthenticateActivity"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:screenOrientation="fullSensor" />
+        <activity
+            android:name=".UserActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="fullSensor" />
     </application>
 
 </manifest>
