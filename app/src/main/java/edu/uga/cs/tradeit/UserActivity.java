@@ -2,9 +2,12 @@ package edu.uga.cs.tradeit;
 
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
 
 public class UserActivity extends AppCompatActivity {
@@ -14,6 +17,10 @@ public class UserActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_user);
 
+        // setup toolbar
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+
         // get fragment type from MainActivity
         String fragmentType = getIntent().getStringExtra("fragmentType");
 
@@ -21,14 +28,14 @@ public class UserActivity extends AppCompatActivity {
         Fragment fragment = null;
         if (fragmentType == null) {
             fragment = new HomeFragment();
-        }
-        switch (fragmentType) {
-            case "Home":
-                fragment = new HomeFragment();
-                break;
+        } else {
+            switch (fragmentType) {
+                case "Home":
+                    fragment = new HomeFragment();
+                    break;
                 //other cases
-        }
-
+            }
+        } // if else
         // update fragment container view
         if (fragment != null && savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction()
@@ -45,6 +52,31 @@ public class UserActivity extends AppCompatActivity {
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         recreate(); // reloads layout in the new orientation
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu (Menu menu) {
+        getMenuInflater().inflate(R.menu.user_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected (@NonNull MenuItem item) {
+        int itemId = item.getItemId();
+        if (itemId == R.id.menu_home) {
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragmentContainerView2, new HomeFragment())
+                    .commit();
+            return true;
+        } else if (itemId == R.id.menu_transactions) {
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragmentContainerView2, new TransactionFragment())
+                    .commit();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
 }

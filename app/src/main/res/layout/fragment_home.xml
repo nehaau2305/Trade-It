@@ -8,6 +8,7 @@
     tools:context=".HomeFragment">
 
     <!-- Logout button at top-right -->
+
     <Button
         android:id="@+id/logoutButton"
         android:layout_width="wrap_content"
@@ -16,7 +17,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="16dp"
-        android:layout_marginEnd="16dp" />
+        android:layout_marginEnd="26dp" />
 
     <!-- Search mode toggle -->
     <RadioGroup
