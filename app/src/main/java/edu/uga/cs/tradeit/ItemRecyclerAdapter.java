@@ -34,10 +34,10 @@ public class ItemRecyclerAdapter extends RecyclerView.Adapter<ItemRecyclerAdapte
         public ItemHolder(View itemView) {
             super(itemView);
             name     = itemView.findViewById(R.id.nameTextView);
-            seller   = itemView.findViewById(R.id.sellerTextView);
+            seller   = itemView.findViewById(R.id.personTextView);
             category = itemView.findViewById(R.id.categoryTextView);
             price    = itemView.findViewById(R.id.priceTextView);
-            buyB     = itemView.findViewById(R.id.buyButton);
+            buyB     = itemView.findViewById(R.id.actionButton);
         }
     }
 
