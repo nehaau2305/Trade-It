@@ -31,6 +31,7 @@
             android:name=".UserActivity"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:screenOrientation="fullSensor" />
+        <activity android:name=".ItemDetailActivity" />
     </application>
 
 </manifest>

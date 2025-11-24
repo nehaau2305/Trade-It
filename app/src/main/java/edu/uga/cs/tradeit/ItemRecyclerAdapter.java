@@ -13,11 +13,9 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-public class ItemRecyclerAdapter extends RecyclerView.Adapter<ItemRecyclerAdapter.ItemHolder>{
+public class ItemRecyclerAdapter extends RecyclerView.Adapter<ItemRecyclerAdapter.ItemHolder> {
 
     // list of items to show
     private List<Item> itemsList;
@@ -29,15 +27,15 @@ public class ItemRecyclerAdapter extends RecyclerView.Adapter<ItemRecyclerAdapte
     // holds references to views inside each card
     class ItemHolder extends RecyclerView.ViewHolder {
         TextView name, seller, category, price;
-        Button buyB;
+        Button viewButton;   // use as "View" button
 
         public ItemHolder(View itemView) {
             super(itemView);
-            name     = itemView.findViewById(R.id.nameTextView);
-            seller   = itemView.findViewById(R.id.personTextView);
-            category = itemView.findViewById(R.id.categoryTextView);
-            price    = itemView.findViewById(R.id.priceTextView);
-            buyB     = itemView.findViewById(R.id.actionButton);
+            name       = itemView.findViewById(R.id.nameTextView);
+            seller     = itemView.findViewById(R.id.personTextView);
+            category   = itemView.findViewById(R.id.categoryTextView);
+            price      = itemView.findViewById(R.id.priceTextView);
+            viewButton = itemView.findViewById(R.id.actionButton);
         }
     }
 
@@ -64,12 +62,27 @@ public class ItemRecyclerAdapter extends RecyclerView.Adapter<ItemRecyclerAdapte
             holder.price.setText("$" + String.format("%.2f", p));
         }
 
-        // ----------category: show human-readable title, not ID ----------
-        String categoryText = item.getCategoryTitle();
-        if (categoryText == null || categoryText.isEmpty()) {
-            categoryText = item.getCategoryId();
+        // ---------- category: look up title via categories/{id}/title ----------
+        DatabaseReference catRef = FirebaseDatabase.getInstance()
+                .getReference("categories");
+
+        String catId = item.getCategoryId();
+        if (catId == null || catId.isEmpty()) {
+            holder.category.setText("No category");
+        } else {
+            catRef.child(catId).child("title")
+                    .get()
+                    .addOnSuccessListener(snapshot -> {
+                        String title = snapshot.getValue(String.class);
+                        if (title == null || title.isEmpty()) {
+                            holder.category.setText("Unknown category");
+                        } else {
+                            holder.category.setText(title);
+                        }
+                    })
+                    .addOnFailureListener(e ->
+                            holder.category.setText("Unknown category"));
         }
-        holder.category.setText(categoryText);
 
         // ---------- seller name ----------
         DatabaseReference usersDbRef = FirebaseDatabase.getInstance()
@@ -83,55 +96,23 @@ public class ItemRecyclerAdapter extends RecyclerView.Adapter<ItemRecyclerAdapte
                     holder.seller.setText("Seller: " + sellerName);
                 });
 
-        // ---------- buy button state ----------
-        String currentUid = FirebaseAuth.getInstance().getUid();
-        if (currentUid != null && currentUid.equals(item.getSellerId())) {
-            // viewing own item -> cannot buy
-            holder.buyB.setEnabled(false);
-            holder.buyB.setText("Your Item");
-        } else {
-            holder.buyB.setEnabled(true);
-            holder.buyB.setText("Buy Item");
-        }
+        // ---------- VIEW button: open detail screen ----------
+        holder.viewButton.setEnabled(true);
+        holder.viewButton.setText("View");
 
-        // ---------- buy button click  ----------
-        DatabaseReference itemsDbRef = FirebaseDatabase.getInstance()
-                .getReference("items");
-
-        holder.buyB.setOnClickListener(v -> {
-            holder.buyB.setEnabled(false);
-
-            String buyerId = FirebaseAuth.getInstance().getUid();
-            if (buyerId == null) {
+        holder.viewButton.setOnClickListener(v -> {
+            String key = item.getKey();
+            if (key == null || key.isEmpty()) {
                 Toast.makeText(holder.itemView.getContext(),
-                        "Please log in again", Toast.LENGTH_SHORT).show();
-                holder.buyB.setEnabled(true);
+                        "Item is missing key", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            // only update buyerId + status so won't overwrite whole object
-            Map<String, Object> updates = new HashMap<>();
-            updates.put("buyerId", buyerId);
-            updates.put("status", "pending");
-
-            itemsDbRef.child(item.getKey())
-                    .updateChildren(updates)
-                    .addOnSuccessListener(aVoid -> {
-                        Toast.makeText(holder.itemView.getContext(),
-                                "Item Requested", Toast.LENGTH_SHORT).show();
-
-                        // remove from list immediately
-                        int pos = holder.getAdapterPosition();
-                        if (pos != RecyclerView.NO_POSITION) {
-                            itemsList.remove(pos);
-                            notifyItemRemoved(pos);
-                        }
-                    })
-                    .addOnFailureListener(e -> {
-                        Toast.makeText(holder.itemView.getContext(),
-                                "Request Failed", Toast.LENGTH_SHORT).show();
-                        holder.buyB.setEnabled(true);
-                    });
+            android.content.Context ctx = holder.itemView.getContext();
+            android.content.Intent intent =
+                    new android.content.Intent(ctx, ItemDetailActivity.class);
+            intent.putExtra("itemKey", key);
+            ctx.startActivity(intent);
         });
     }
 

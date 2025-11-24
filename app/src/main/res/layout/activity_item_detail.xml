@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/detailNameTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Item Name"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/detailCategoryTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Category"
+            android:layout_marginTop="4dp" />
+
+        <TextView
+            android:id="@+id/detailPriceTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="$0.00"
+            android:layout_marginTop="4dp" />
+
+        <TextView
+            android:id="@+id/detailStatusTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Status: available"
+            android:layout_marginTop="4dp" />
+
+        <TextView
+            android:id="@+id/detailSellerNameTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Seller: ..."
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:id="@+id/detailSellerEmailTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Email: ..."
+            android:layout_marginTop="2dp" />
+
+        <TextView
+            android:id="@+id/detailDescriptionLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Description"
+            android:textStyle="bold"
+            android:layout_marginTop="12dp" />
+
+        <TextView
+            android:id="@+id/detailDescriptionTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="..."
+            android:layout_marginTop="4dp" />
+
+        <Button
+            android:id="@+id/detailActionButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Request Item"
+            android:layout_marginTop="16dp" />
+
+    </LinearLayout>
+</ScrollView>

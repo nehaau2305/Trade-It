@@ -114,8 +114,8 @@ public class RegisterFragment extends Fragment {
                     // Get uid of newly created user
                     String uid = auth.getCurrentUser().getUid();
 
-                    // Create simple user object
-                    User user = new User(name);
+                    // Create user object with name + email
+                    User user = new User(name, email);
 
                     // Save user under /users/uid in Realtime Database
                     usersDbRef.child(uid).setValue(user)

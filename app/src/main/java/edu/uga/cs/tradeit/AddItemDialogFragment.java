@@ -28,95 +28,89 @@ import java.util.List;
 
 public class AddItemDialogFragment extends DialogFragment {
 
-    // UI fields
+    // UI
+    private AutoCompleteTextView itemCategoryDropdown;
     private EditText itemNameEditText;
     private EditText priceEditText;
+    private EditText descriptionEditText;
     private CheckBox freeCheckBox;
     private Button addButton;
     private Button cancelButton;
     private Button addCategoryButton;
-    private AutoCompleteTextView itemCategoryDropdown;
 
-    // Firebase references
-    private DatabaseReference itemsDbRef;
-    private DatabaseReference categoriesDbRef;
-
-    // category data
+    // categories
     private List<Category> categoryList = new ArrayList<>();
     private List<String> categoryTitles = new ArrayList<>();
-    private String selectedCategoryKey = null; // id of chosen category
+    private String selectedCategoryKey = null;
 
     @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
-
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
         LayoutInflater inflater = requireActivity().getLayoutInflater();
         View view = inflater.inflate(R.layout.dialog_add_item, null);
 
-        // hook up UI elements from XML
+        // hook up UI
+        itemCategoryDropdown = view.findViewById(R.id.itemCategoryDropdown);
         itemNameEditText     = view.findViewById(R.id.itemNameEditText);
         priceEditText        = view.findViewById(R.id.priceEditText);
+        descriptionEditText  = view.findViewById(R.id.descriptionEditText);
         freeCheckBox         = view.findViewById(R.id.freeCheckBox);
         addButton            = view.findViewById(R.id.addButton);
         cancelButton         = view.findViewById(R.id.cancelButton);
         addCategoryButton    = view.findViewById(R.id.addCategoryButton);
-        itemCategoryDropdown = view.findViewById(R.id.itemCategoryDropdown);
 
-        // Firebase references
-        itemsDbRef      = FirebaseDatabase.getInstance().getReference("items");
-        categoriesDbRef = FirebaseDatabase.getInstance().getReference("categories");
+        builder.setView(view);
+        Dialog dialog = builder.create();
 
-        // load existing categories into dropdown
         loadCategories();
 
-        // when user picks a category from dropdown, remember its key
         itemCategoryDropdown.setOnItemClickListener((parent, v, position, id) -> {
             if (position >= 0 && position < categoryList.size()) {
-                Category c = categoryList.get(position);
-                selectedCategoryKey = c.getKey();
+                Category selected = categoryList.get(position);
+                selectedCategoryKey = selected.getKey();
             } else {
                 selectedCategoryKey = null;
             }
         });
 
-        // free checkbox: disable price field when checked
+        addCategoryButton.setOnClickListener(v -> showCreateCategoryDialog());
+
         freeCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {
                 priceEditText.setText("");
-                priceEditText.setEnabled(false);
-            } else {
-                priceEditText.setEnabled(true);
             }
         });
 
-        // "+ New" category button
-        addCategoryButton.setOnClickListener(v -> showAddCategoryDialog());
+        cancelButton.setOnClickListener(v -> dialog.dismiss());
 
-        // "Add Item" button
-        addButton.setOnClickListener(v -> addNewItem());
+        addButton.setOnClickListener(v -> addNewItem(dialog));
 
-        // "Cancel" button
-        cancelButton.setOnClickListener(v -> dismiss());
-
-        builder.setView(view);
-        return builder.create();
+        return dialog;
     }
 
-    // -------- load categories from /categories into the dropdown  ----------
     private void loadCategories() {
-        categoriesDbRef.orderByChild("title")
+        String currentUid = FirebaseAuth.getInstance().getUid();
+        if (currentUid == null) {
+            Toast.makeText(getContext(), "User not recognized", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        DatabaseReference catRef = FirebaseDatabase.getInstance()
+                .getReference("categories");
+
+        catRef.orderByChild("creatorId").equalTo(currentUid)
                 .addValueEventListener(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
                         categoryList.clear();
                         categoryTitles.clear();
 
-                        for (DataSnapshot catSnapshot : snapshot.getChildren()) {
-                            Category c = catSnapshot.getValue(Category.class);
+                        for (DataSnapshot catSnap : snapshot.getChildren()) {
+                            Category c = catSnap.getValue(Category.class);
                             if (c != null) {
                                 if (c.getKey() == null || c.getKey().isEmpty()) {
-                                    c.setKey(catSnapshot.getKey());
+                                    c.setKey(catSnap.getKey());
                                 }
                                 categoryList.add(c);
                                 categoryTitles.add(c.getTitle());
@@ -133,157 +127,151 @@ public class AddItemDialogFragment extends DialogFragment {
 
                     @Override
                     public void onCancelled(@NonNull DatabaseError error) {
-                        Toast.makeText(
-                                getContext(),
+                        Toast.makeText(getContext(),
                                 "Failed to load categories",
-                                Toast.LENGTH_SHORT
-                        ).show();
+                                Toast.LENGTH_SHORT).show();
                     }
                 });
     }
 
-    //  ---------- small dialog to create a new category --------
-    private void showAddCategoryDialog() {
+    private void showCreateCategoryDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setTitle("New Category");
+
         final EditText input = new EditText(requireContext());
-        input.setHint("Category name");
+        input.setHint("Category title");
+        builder.setView(input);
 
-        new AlertDialog.Builder(requireContext())
-                .setTitle("New Category")
-                .setView(input)
-                .setPositiveButton("Create", (dialog, which) -> {
-                    String title = input.getText().toString().trim();
-                    if (title.isEmpty()) {
-                        Toast.makeText(
-                                getContext(),
-                                "Category name required",
-                                Toast.LENGTH_SHORT
-                        ).show();
-                        return;
-                    }
-
-                    FirebaseUser currUser = FirebaseAuth.getInstance().getCurrentUser();
-                    if (currUser == null) {
-                        Toast.makeText(
-                                getContext(),
-                                "User not recognized",
-                                Toast.LENGTH_SHORT
-                        ).show();
-                        return;
-                    }
-
-                    String creatorId = currUser.getUid();
-                    long now = System.currentTimeMillis();
-
-                    Category newCat = new Category(creatorId, title, now);
-                    String newKey = categoriesDbRef.push().getKey();
-                    if (newKey == null) {
-                        Toast.makeText(
-                                getContext(),
-                                "Failed to create category",
-                                Toast.LENGTH_SHORT
-                        ).show();
-                        return;
-                    }
-
-                    newCat.setKey(newKey);
-
-                    categoriesDbRef.child(newKey).setValue(newCat)
-                            .addOnSuccessListener(aVoid -> {
-                                Toast.makeText(
-                                        getContext(),
-                                        "Category created",
-                                        Toast.LENGTH_SHORT
-                                ).show();
-
-                                // remember and show this new category
-                                selectedCategoryKey = newKey;
-                                itemCategoryDropdown.setText(title, false);
-                                // loadCategories() listener will refresh the list
-                            })
-                            .addOnFailureListener(e ->
-                                    Toast.makeText(
-                                            getContext(),
-                                            "Failed to save category",
-                                            Toast.LENGTH_SHORT
-                                    ).show()
-                            );
-                })
-                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
-                .show();
-    }
-
-    // -------- validate fields and save a new item into /items  ----------
-    private void addNewItem() {
-        String name = itemNameEditText.getText().toString().trim();
-        String priceString = priceEditText.getText().toString().trim();
-        boolean isFree = freeCheckBox.isChecked();
-
-        // item name required
-        if (name.isEmpty()) {
-            Toast.makeText(getContext(), "Item name required", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // category must be selected
-        if (selectedCategoryKey == null || selectedCategoryKey.isEmpty()) {
-            Toast.makeText(getContext(), "Select or create a category", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        String selectedCategoryTitle = itemCategoryDropdown.getText().toString().trim();
-
-        double priceValue;
-        if (isFree) {
-            priceValue = 0.0;
-        } else {
-            if (priceString.isEmpty()) {
+        builder.setPositiveButton("Save", (dialog, which) -> {
+            String title = input.getText().toString().trim();
+            if (title.isEmpty()) {
                 Toast.makeText(getContext(),
-                        "Price required or mark item as free",
+                        "Title cannot be empty",
                         Toast.LENGTH_SHORT).show();
                 return;
             }
-            try {
-                priceValue = Double.parseDouble(priceString);
-            } catch (NumberFormatException e) {
-                Toast.makeText(getContext(), "Invalid price", Toast.LENGTH_SHORT).show();
-                return;
-            }
-        }
+            createCategoryInFirebase(title);
+        });
 
-        FirebaseUser currUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (currUser == null) {
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
+
+        builder.show();
+    }
+
+    private void createCategoryInFirebase(String title) {
+        String currentUid = FirebaseAuth.getInstance().getUid();
+        if (currentUid == null) {
             Toast.makeText(getContext(), "User not recognized", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        String sellerId = currUser.getUid();
-        long time = System.currentTimeMillis();
+        DatabaseReference catRef = FirebaseDatabase.getInstance()
+                .getReference("categories");
 
-        String key = itemsDbRef.push().getKey();
+        String key = catRef.push().getKey();
         if (key == null) {
-            Toast.makeText(getContext(), "Failed to create item key", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(),
+                    "Failed to create category",
+                    Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // create Item with BOTH categoryId and categoryTitle
-        Item newItem = new Item(
-                sellerId,
-                name,
-                selectedCategoryKey,     // categoryId
-                selectedCategoryTitle,   // categoryTitle
-                time,
-                priceValue,
-                "available"
-        );
-        newItem.setKey(key);
+        long time = System.currentTimeMillis();
+        Category newCategory = new Category(currentUid, title, time);
+        newCategory.setKey(key);
 
-        itemsDbRef.child(key).setValue(newItem)
+        catRef.child(key).setValue(newCategory)
                 .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(getContext(), "Item added", Toast.LENGTH_SHORT).show();
-                    dismiss();
+                    Toast.makeText(getContext(),
+                            "Category created",
+                            Toast.LENGTH_SHORT).show();
+
+                    categoryList.add(newCategory);
+                    categoryTitles.add(title);
+
+                    ArrayAdapter<String> adapter =
+                            (ArrayAdapter<String>) itemCategoryDropdown.getAdapter();
+                    if (adapter != null) {
+                        adapter.notifyDataSetChanged();
+                    }
+
+                    itemCategoryDropdown.setText(title, false);
+                    selectedCategoryKey = key;
                 })
                 .addOnFailureListener(e ->
-                        Toast.makeText(getContext(), "Failed to add item", Toast.LENGTH_SHORT).show()
-                );
+                        Toast.makeText(getContext(),
+                                "Failed to save category",
+                                Toast.LENGTH_SHORT).show());
+    }
+
+    private void addNewItem(Dialog dialog) {
+        String name = itemNameEditText.getText().toString().trim();
+        String priceString = priceEditText.getText().toString().trim();
+        String desc = descriptionEditText.getText().toString().trim();
+
+        if (name.isEmpty() || desc.isEmpty()) {
+            Toast.makeText(getContext(), "Fill in all fields", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (selectedCategoryKey == null || selectedCategoryKey.isEmpty()) {
+            Toast.makeText(getContext(), "Please select a category", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        double price = 0.0;
+        if (!freeCheckBox.isChecked()) {
+            if (priceString.isEmpty()) {
+                Toast.makeText(getContext(),
+                        "Enter a price or mark as free",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+            try {
+                price = Double.parseDouble(priceString);
+            } catch (NumberFormatException e) {
+                Toast.makeText(getContext(),
+                        "Price invalid",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+
+        DatabaseReference itemsRef =
+                FirebaseDatabase.getInstance().getReference("items");
+        String key = itemsRef.push().getKey();
+        FirebaseUser currUser = FirebaseAuth.getInstance().getCurrentUser();
+        long time = System.currentTimeMillis();
+
+        if (currUser != null && key != null) {
+            String sellerId = currUser.getUid();
+
+            Item newItem = new Item(
+                    sellerId,
+                    name,
+                    selectedCategoryKey,
+                    time,
+                    price,
+                    "available",
+                    desc
+            );
+            newItem.setKey(key);
+
+            itemsRef.child(key).setValue(newItem)
+                    .addOnSuccessListener(aVoid -> {
+                        Toast.makeText(getContext(),
+                                "Successfully added item",
+                                Toast.LENGTH_SHORT).show();
+                        dialog.dismiss();
+                    })
+                    .addOnFailureListener(e ->
+                            Toast.makeText(getContext(),
+                                    "Failed to add item",
+                                    Toast.LENGTH_SHORT).show());
+        } else {
+            Toast.makeText(getContext(),
+                    "User not recognized",
+                    Toast.LENGTH_SHORT).show();
+        }
     }
 }

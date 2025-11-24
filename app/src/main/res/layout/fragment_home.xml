@@ -8,7 +8,6 @@
     tools:context=".HomeFragment">
 
     <!-- Logout button at top-right -->
-
     <Button
         android:id="@+id/logoutButton"
         android:layout_width="wrap_content"
@@ -19,13 +18,41 @@
         android:layout_marginTop="16dp"
         android:layout_marginEnd="26dp" />
 
+    <!-- Row with My Items + Transactions -->
+    <LinearLayout
+        android:id="@+id/navButtonsLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="@id/logoutButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="8dp">
+
+        <Button
+            android:id="@+id/myItemsButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="My Items" />
+
+        <Button
+            android:id="@+id/transactionsButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Transactions" />
+    </LinearLayout>
+
     <!-- Search mode toggle -->
     <RadioGroup
         android:id="@+id/searchModeGroup"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintTop_toBottomOf="@id/logoutButton"
+        app:layout_constraintTop_toBottomOf="@id/navButtonsLayout"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginStart="16dp"
@@ -46,7 +73,7 @@
             android:text="By Item"/>
     </RadioGroup>
 
-    <!-- Single search bar behaves differently based on toggle -->
+    <!-- Single search bar -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/searchInputLayout"
         android:layout_width="0dp"
@@ -59,7 +86,6 @@
         android:layout_marginEnd="16dp"
         android:layout_marginTop="8dp">
 
-        <!-- AutoCompleteTextView show category suggestions in category mode -->
         <AutoCompleteTextView
             android:id="@+id/searchInputEditText"
             android:layout_width="match_parent"

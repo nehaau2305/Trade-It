@@ -1,47 +1,62 @@
 package edu.uga.cs.tradeit;
+
 public class Item {
 
-    private String key;
-
-    private String sellerId;
-
+    private String key;          // Firebase key
+    private String sellerId;     // UID of seller
     private String name;
-
-    private String categoryId;
-    private String categoryTitle;
+    private String categoryId;   // category node key
     private long creationTime;
-
-    // price (0.0 means free)
     private double price;
+    private String buyerId;      // UID of buyer (if any)
+    private String status;       // "available", "pending", "completed"
 
-    private String buyerId;
+    // Description for detail page
+    private String description;
 
-    // "available", "pending", or "sold"
-    private String status;
+    // confirmation flags
+    private boolean buyerConfirmed;
+    private boolean sellerConfirmed;
 
+    // Firebase empty constructor
     public Item() {
+        this.key = null;
+        this.sellerId = null;
+        this.name = null;
+        this.categoryId = null;
+        this.creationTime = 0L;
+        this.price = 0.0;
+        this.buyerId = null;
+        this.status = null;
+        this.description = null;
+        this.buyerConfirmed = false;
+        this.sellerConfirmed = false;
     }
 
+    // Main constructor used when creating an item
     public Item(String sellerId,
                 String name,
                 String categoryId,
-                String categoryTitle,
                 long creationTime,
                 double price,
-                String status) {
+                String status,
+                String description) {
 
-        this.key = null;
+        this.key = null; // set after push()
         this.sellerId = sellerId;
         this.name = name;
         this.categoryId = categoryId;
-        this.categoryTitle = categoryTitle;
         this.creationTime = creationTime;
         this.price = price;
         this.buyerId = null;
         this.status = status;
+        this.description = description;
+        this.buyerConfirmed = false;
+        this.sellerConfirmed = false;
     }
 
-    // ----- getters and setters -----
+    // --- getters/setters ---
+
     public String getKey() { return key; }
     public void setKey(String key) { this.key = key; }
 
@@ -50,13 +65,12 @@ public class Item {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
     public String getCategoryId() { return categoryId; }
     public void setCategoryId(String categoryId) { this.categoryId = categoryId; }
 
     public String getCategory() { return categoryId; }
     public void setCategory(String categoryId) { this.categoryId = categoryId; }
-    public String getCategoryTitle() { return categoryTitle; }
-    public void setCategoryTitle(String categoryTitle) { this.categoryTitle = categoryTitle; }
 
     public long getCreationTime() { return creationTime; }
     public void setCreationTime(long creationTime) { this.creationTime = creationTime; }
@@ -69,4 +83,13 @@ public class Item {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
+    public boolean isBuyerConfirmed() { return buyerConfirmed; }
+    public void setBuyerConfirmed(boolean buyerConfirmed) { this.buyerConfirmed = buyerConfirmed; }
+
+    public boolean isSellerConfirmed() { return sellerConfirmed; }
+    public void setSellerConfirmed(boolean sellerConfirmed) { this.sellerConfirmed = sellerConfirmed; }
 }

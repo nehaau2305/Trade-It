@@ -19,26 +19,24 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Category dropdown + Add Category button in one row -->
-
     <!-- Category dropdown (searchable) -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/itemCategoryLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:hint="Select category"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="8dp"
         app:layout_constraintTop_toBottomOf="@id/addItemTitleText"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/addCategoryButton"
-        android:layout_marginTop="12dp"
-        android:layout_marginEnd="8dp">
+        app:layout_constraintEnd_toStartOf="@id/addCategoryButton">
 
         <AutoCompleteTextView
             android:id="@+id/itemCategoryDropdown"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="text"
-            android:padding="8dp"/>
+            android:padding="8dp" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <!-- Small button to create a new category -->
@@ -57,10 +55,10 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:hint="Item name"
+        android:layout_marginTop="12dp"
         app:layout_constraintTop_toBottomOf="@id/itemCategoryLayout"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="12dp">
+        app:layout_constraintEnd_toEndOf="parent">
 
         <EditText
             android:id="@+id/itemNameEditText"
@@ -76,10 +74,10 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:hint="Price"
+        android:layout_marginTop="8dp"
         app:layout_constraintTop_toBottomOf="@id/itemNameLayout"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="8dp">
+        app:layout_constraintEnd_toEndOf="parent">
 
         <EditText
             android:id="@+id/priceEditText"
@@ -89,15 +87,35 @@
             android:maxLines="1" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <!-- NEW: Description field -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/descriptionLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="Description"
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@id/priceLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <EditText
+            android:id="@+id/descriptionEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textMultiLine"
+            android:minLines="3"
+            android:gravity="top|start" />
+    </com.google.android.material.textfield.TextInputLayout>
+
     <!-- Free checkbox -->
     <CheckBox
         android:id="@+id/freeCheckBox"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="This item is free"
-        app:layout_constraintTop_toBottomOf="@id/priceLayout"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginTop="8dp" />
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@id/descriptionLayout"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <!-- Bottom buttons: Cancel + Add -->
     <LinearLayout
@@ -106,11 +124,11 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="end"
+        android:layout_marginTop="16dp"
         app:layout_constraintTop_toBottomOf="@id/freeCheckBox"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        android:layout_marginTop="16dp">
+        app:layout_constraintBottom_toBottomOf="parent">
 
         <Button
             android:id="@+id/cancelButton"

@@ -39,28 +39,28 @@ public class HomeFragment extends Fragment {
     private FloatingActionButton addItemButton;
     private Button logoutButton;
 
+    private Button myItemsButton;
+    private Button transactionsButton;
+
     private RadioGroup searchModeGroup;
     private RadioButton searchByCategoryRadio;
     private RadioButton searchByItemRadio;
     private AutoCompleteTextView searchInputEditText;
 
-    // ---------- Data: items  ----------
-    private List<Item> allItems = new ArrayList<>();    // all available items from Firebase
-    private List<Item> itemsList = new ArrayList<>();   // filtered list shown in RecyclerView
+    // ---------- Data: items ----------
+    private List<Item> allItems = new ArrayList<>();
+    private List<Item> itemsList = new ArrayList<>();
 
-    // ---------- Data: categories  ----------
+    // ---------- Data: categories ----------
     private List<Category> categoryList = new ArrayList<>();
     private List<String> categoryTitles = new ArrayList<>();
     private String selectedCategoryKey = null;
 
-    // search modes
     private static final int MODE_CATEGORY = 0;
     private static final int MODE_ITEM = 1;
     private int currentSearchMode = MODE_CATEGORY;
 
-    public HomeFragment() {
-        // empty required constructor
-    }
+    public HomeFragment() { }
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -70,13 +70,15 @@ public class HomeFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_home, container, false);
 
         // hook up views
-        recyclerView        = view.findViewById(R.id.recyclerView);
-        addItemButton       = view.findViewById(R.id.floatingActionButton);
-        logoutButton        = view.findViewById(R.id.logoutButton);
-        searchModeGroup     = view.findViewById(R.id.searchModeGroup);
+        recyclerView          = view.findViewById(R.id.recyclerView);
+        addItemButton         = view.findViewById(R.id.floatingActionButton);
+        logoutButton          = view.findViewById(R.id.logoutButton);
+        myItemsButton         = view.findViewById(R.id.myItemsButton);
+        transactionsButton    = view.findViewById(R.id.transactionsButton);
+        searchModeGroup       = view.findViewById(R.id.searchModeGroup);
         searchByCategoryRadio = view.findViewById(R.id.searchByCategoryRadio);
         searchByItemRadio     = view.findViewById(R.id.searchByItemRadio);
-        searchInputEditText = view.findViewById(R.id.searchInputEditText);
+        searchInputEditText   = view.findViewById(R.id.searchInputEditText);
 
         // RecyclerView layout (1 column portrait, 2 landscape)
         int orientation = getResources().getConfiguration().orientation;
@@ -104,42 +106,51 @@ public class HomeFragment extends Fragment {
             requireActivity().finish();
         });
 
-        // toggle: category vs item search
+        // ---------- nav buttons ----------
+
+        myItemsButton.setOnClickListener(v -> {
+            requireActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragmentContainerView2, new MyItemsFragment())
+                    .addToBackStack(null)
+                    .commit();
+        });
+
+        transactionsButton.setOnClickListener(v -> {
+            requireActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragmentContainerView2, new TransactionFragment())
+                    .addToBackStack(null)
+                    .commit();
+        });
+
+        // ---------- search toggle: category vs item ----------
         searchModeGroup.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.searchByCategoryRadio) {
                 currentSearchMode = MODE_CATEGORY;
                 searchInputEditText.setText("");
                 searchInputEditText.setHint("Search category");
-                // in category mode, show category suggestions
                 setCategorySuggestionsAdapter();
             } else if (checkedId == R.id.searchByItemRadio) {
                 currentSearchMode = MODE_ITEM;
-                selectedCategoryKey = null; // clear category filter
+                selectedCategoryKey = null;
                 searchInputEditText.setText("");
                 searchInputEditText.setHint("Search item name");
-                // in item mode, no category suggestions
                 searchInputEditText.setAdapter(null);
             }
             applyFilters();
         });
 
-        // when typing, only item mode cares
         searchInputEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) { }
-
-            @Override
-            public void afterTextChanged(Editable s) {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
+            @Override public void afterTextChanged(Editable s) {
                 if (currentSearchMode == MODE_ITEM) {
                     applyFilters();
                 }
             }
         });
 
-        // when selecting from suggestions (used for category mode)
         searchInputEditText.setOnItemClickListener((parent, v, position, id) -> {
             if (currentSearchMode == MODE_CATEGORY) {
                 if (position >= 0 && position < categoryList.size()) {
@@ -152,14 +163,13 @@ public class HomeFragment extends Fragment {
             }
         });
 
-        // default: category mode, so set suggestions
+        // default: category mode
         setCategorySuggestionsAdapter();
         searchInputEditText.setHint("Search category");
 
         return view;
     }
 
-    // ----------load items from /items with status=="available"  ----------
     private void loadAvailableItems() {
         DatabaseReference db = FirebaseDatabase.getInstance().getReference("items");
 
@@ -191,7 +201,6 @@ public class HomeFragment extends Fragment {
                 });
     }
 
-    // ----------load categories into list for suggestions ----------
     private void loadCategories() {
         DatabaseReference catRef = FirebaseDatabase.getInstance().getReference("categories");
 
@@ -213,7 +222,6 @@ public class HomeFragment extends Fragment {
                             }
                         }
 
-                        // if we are currently in category mode, refresh suggestions
                         if (currentSearchMode == MODE_CATEGORY) {
                             setCategorySuggestionsAdapter();
                         }
@@ -228,7 +236,6 @@ public class HomeFragment extends Fragment {
                 });
     }
 
-    //  ---------- set adapter on searchInputEditText for category suggestions  ----------
     private void setCategorySuggestionsAdapter() {
         ArrayAdapter<String> dropdownAdapter = new ArrayAdapter<>(
                 requireContext(),
@@ -238,21 +245,18 @@ public class HomeFragment extends Fragment {
         searchInputEditText.setAdapter(dropdownAdapter);
     }
 
-    // ---------- apply filters based on current mode  ----------
     private void applyFilters() {
         itemsList.clear();
 
         if (currentSearchMode == MODE_CATEGORY) {
-            // filter by category id
             for (Item item : allItems) {
                 if (selectedCategoryKey == null || selectedCategoryKey.isEmpty()) {
-                    // no category selected -> show everything
                     itemsList.add(item);
                 } else if (selectedCategoryKey.equals(item.getCategoryId())) {
                     itemsList.add(item);
                 }
             }
-        } else { // MODE_ITEM
+        } else {
             String query = searchInputEditText.getText().toString().trim().toLowerCase();
 
             for (Item item : allItems) {
