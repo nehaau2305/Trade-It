@@ -75,6 +75,12 @@ public class UserActivity extends AppCompatActivity {
                     .replace(R.id.fragmentContainerView2, new TransactionFragment())
                     .commit();
             return true;
+        } else if (itemId == R.id.menu_my_items) {
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragmentContainerView2, new MyItemsFragment())
+                    .commit();
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }

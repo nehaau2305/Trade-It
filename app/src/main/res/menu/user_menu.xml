@@ -6,4 +6,7 @@
     <item
         android:id="@+id/menu_transactions"
         android:title="Transactions" />
+    <item
+        android:id="@+id/menu_my_items"
+        android:title="My Items" />
 </menu>
