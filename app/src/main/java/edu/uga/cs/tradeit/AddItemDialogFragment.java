@@ -79,6 +79,9 @@ public class AddItemDialogFragment extends DialogFragment {
         freeCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {
                 priceEditText.setText("");
+                priceEditText.setEnabled(false);
+            } else {
+                priceEditText.setEnabled(true);
             }
         });
 
