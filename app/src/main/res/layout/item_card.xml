@@ -48,11 +48,19 @@
                 android:layout_height="wrap_content"
                 android:text="Price" />
 
-            <Button
-                android:id="@+id/actionButton"
+            <LinearLayout
+                android:id="@+id/buttonContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Buy" />
+                android:gravity="end"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/actionButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Buy" />
+            </LinearLayout>
 
         </LinearLayout>
 

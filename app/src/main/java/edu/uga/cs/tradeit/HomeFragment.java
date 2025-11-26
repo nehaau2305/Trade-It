@@ -85,7 +85,7 @@ public class HomeFragment extends Fragment {
         int spanCount = (orientation == Configuration.ORIENTATION_PORTRAIT) ? 1 : 2;
         recyclerView.setLayoutManager(new GridLayoutManager(requireContext(), spanCount));
 
-        adapter = new ItemRecyclerAdapter(itemsList);
+        adapter = new ItemRecyclerAdapter(itemsList, false);
         recyclerView.setAdapter(adapter);
 
         // load data

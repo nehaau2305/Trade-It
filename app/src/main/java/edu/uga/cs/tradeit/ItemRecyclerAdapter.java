@@ -1,12 +1,16 @@
 package edu.uga.cs.tradeit;
 
+import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.view.View;
 import android.widget.Toast;
 
+import androidx.fragment.app.FragmentActivity;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.firebase.auth.FirebaseAuth;
@@ -19,9 +23,11 @@ public class ItemRecyclerAdapter extends RecyclerView.Adapter<ItemRecyclerAdapte
 
     // list of items to show
     private List<Item> itemsList;
+    private boolean showExtraButtons;
 
-    public ItemRecyclerAdapter(List<Item> itemsList) {
+    public ItemRecyclerAdapter(List<Item> itemsList, boolean showExtraButtons) {
         this.itemsList = itemsList;
+        this.showExtraButtons = showExtraButtons;
     }
 
     // holds references to views inside each card
@@ -114,6 +120,61 @@ public class ItemRecyclerAdapter extends RecyclerView.Adapter<ItemRecyclerAdapte
             intent.putExtra("itemKey", key);
             ctx.startActivity(intent);
         });
+
+        // ---------- EDIT & DELETE buttons: on my items fragment ----------
+        LinearLayout container = holder.itemView.findViewById(R.id.buttonContainer);
+        // remove previously added buttons if existing
+        if (container.getChildCount() > 1) {
+            container.removeViews(1, container.getChildCount()-1);
+        }
+        if (showExtraButtons) {
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            Button editButton = new Button(holder.itemView.getContext());
+            Button deleteButton = new Button(holder.itemView.getContext());
+            editButton.setText("Edit");
+            deleteButton.setText("Delete");
+            editButton.setLayoutParams(params);
+            deleteButton.setLayoutParams(params);
+            container.addView(editButton);
+            container.addView(deleteButton);
+
+            // button click listeners
+            editButton.setOnClickListener(v -> {
+                // get item position
+                int pos = holder.getBindingAdapterPosition();
+                if (pos == RecyclerView.NO_POSITION) return ;
+
+                Item selectedItem = itemsList.get(pos);
+                Bundle bundle = new Bundle();
+                bundle.putString("itemId", selectedItem.getKey());
+
+                AddItemDialogFragment dialogFragment = new AddItemDialogFragment();
+                dialogFragment.setArguments(bundle);
+                FragmentActivity activity = (FragmentActivity) holder.itemView.getContext();
+                dialogFragment.show(activity.getSupportFragmentManager(), "editItem");
+            });
+            deleteButton.setOnClickListener(v -> {
+                int pos = holder.getBindingAdapterPosition();
+                if (pos == RecyclerView.NO_POSITION) return ;
+
+                Item selectedItem = itemsList.get(pos);
+                DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("items").child(selectedItem.getKey());
+
+                dbRef.removeValue().addOnSuccessListener(unused -> {
+                    int index = itemsList.indexOf(selectedItem);
+                    if (index != -1) {
+                        itemsList.remove(pos);
+                        notifyItemRemoved(pos);
+                    }
+                    Log.d("DeleteBug", "curr user:  " + FirebaseAuth.getInstance().getCurrentUser());
+                }).addOnFailureListener(e -> {
+                    Log.e("DeleteBug", "Delete failed:  ", e);
+                });
+            });
+        }
     }
 
     @Override

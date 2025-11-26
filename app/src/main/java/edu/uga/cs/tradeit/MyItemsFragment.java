@@ -47,7 +47,7 @@ public class MyItemsFragment extends Fragment {
         int spanCount = (orientation == Configuration.ORIENTATION_PORTRAIT) ? 1 : 2;
         recyclerView.setLayoutManager(new GridLayoutManager(requireContext(), spanCount));
 
-        adapter = new ItemRecyclerAdapter(myItems);
+        adapter = new ItemRecyclerAdapter(myItems, true);
         recyclerView.setAdapter(adapter);
 
         loadMyItems();
