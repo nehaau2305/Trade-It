@@ -1,6 +1,7 @@
 package edu.uga.cs.tradeit;
 
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -15,10 +16,11 @@ public class ItemDetailActivity extends AppCompatActivity {
 
     private TextView nameTV, categoryTV, priceTV, statusTV,
             sellerNameTV, sellerEmailTV, descTV;
-    private Button actionButton;
+    private Button actionButton, editButton, deleteButton;
 
     private DatabaseReference itemsRef;
     private DatabaseReference usersRef;
+    private DatabaseReference categoriesRef;
 
     private String itemKey;
     private Item currentItem;
@@ -37,9 +39,12 @@ public class ItemDetailActivity extends AppCompatActivity {
         sellerEmailTV = findViewById(R.id.detailSellerEmailTextView);
         descTV = findViewById(R.id.detailDescriptionTextView);
         actionButton = findViewById(R.id.detailActionButton);
+        editButton = findViewById(R.id.detailEditButton);
+        deleteButton = findViewById(R.id.detailDeleteButton);
 
         itemsRef = FirebaseDatabase.getInstance().getReference("items");
         usersRef = FirebaseDatabase.getInstance().getReference("users");
+        categoriesRef = FirebaseDatabase.getInstance().getReference("categories");
         currentUid = FirebaseAuth.getInstance().getUid();
 
         itemKey = getIntent().getStringExtra("itemKey");
@@ -49,6 +54,10 @@ public class ItemDetailActivity extends AppCompatActivity {
             return;
         }
 
+        loadItemDetails();
+    }
+
+    public void reloadItem() {
         loadItemDetails();
     }
 
@@ -74,11 +83,24 @@ public class ItemDetailActivity extends AppCompatActivity {
     }
 
     private void bindItemToUI() {
-        nameTV.setText(currentItem.getName());
+        if (currentItem == null) return;
 
-        String catText = currentItem.getCategoryId();
-        if (catText == null) catText = "No category";
-        categoryTV.setText("Category: " + catText); // (still ID, but fine – list pages show title)
+        nameTV.setText(currentItem.getName() == null ? "" : currentItem.getName());
+
+        String catId = currentItem.getCategoryId();
+        if (catId == null || catId.isEmpty()) {
+            categoryTV.setText("Category: None");
+        } else {
+            categoriesRef.child(catId).child("title")
+                    .get()
+                    .addOnSuccessListener(snap -> {
+                        String title = snap.getValue(String.class);
+                        if (title == null) title = "Unknown";
+                        categoryTV.setText("Category: " + title);
+                    })
+                    .addOnFailureListener(e ->
+                            categoryTV.setText("Category: Unknown"));
+        }
 
         double p = currentItem.getPrice();
         if (p == 0.0) {
@@ -98,6 +120,7 @@ public class ItemDetailActivity extends AppCompatActivity {
             descTV.setText(desc);
         }
 
+        setupOwnerButtons();
         setupActionButton();
     }
 
@@ -128,9 +151,34 @@ public class ItemDetailActivity extends AppCompatActivity {
                 });
     }
 
+    private void setupOwnerButtons() {
+        if (editButton == null || deleteButton == null || currentItem == null) return;
+
+        String status = currentItem.getStatus();
+        String sellerId = currentItem.getSellerId();
+        boolean isSeller = currentUid != null && currentUid.equals(sellerId);
+        boolean isAvailable = "available".equals(status);
+
+        if (isSeller && isAvailable) {
+            editButton.setVisibility(View.VISIBLE);
+            deleteButton.setVisibility(View.VISIBLE);
+
+            editButton.setOnClickListener(v -> {
+                EditItemDialogFragment dialog =
+                        EditItemDialogFragment.newInstance(currentItem.getKey());
+                dialog.show(getSupportFragmentManager(), "EditItemDialog");
+            });
+
+            deleteButton.setOnClickListener(v -> deleteItem());
+        } else {
+            editButton.setVisibility(View.GONE);
+            deleteButton.setVisibility(View.GONE);
+        }
+    }
+
     private void setupActionButton() {
         actionButton.setEnabled(false);
-        actionButton.setVisibility(Button.GONE);
+        actionButton.setVisibility(View.GONE);
 
         if (currentUid == null || currentItem == null) return;
 
@@ -143,40 +191,38 @@ public class ItemDetailActivity extends AppCompatActivity {
 
         if ("available".equals(status)) {
             if (!isSeller) {
-                actionButton.setVisibility(Button.VISIBLE);
+                actionButton.setVisibility(View.VISIBLE);
                 actionButton.setEnabled(true);
                 actionButton.setText("Request Item");
                 actionButton.setOnClickListener(v -> requestItem());
             }
         } else if ("pending".equals(status)) {
             if (!(isSeller || isBuyer)) {
-                // neither party – no button
                 return;
             }
 
             boolean buyerConf = currentItem.isBuyerConfirmed();
             boolean sellerConf = currentItem.isSellerConfirmed();
 
-            actionButton.setVisibility(Button.VISIBLE);
+            actionButton.setVisibility(View.VISIBLE);
 
             if (isSeller) {
                 if (sellerConf && !buyerConf) {
                     actionButton.setEnabled(false);
                     actionButton.setText("Waiting for Buyer");
                 } else if (sellerConf && buyerConf) {
-                    // should already be completed but just in case
-                    actionButton.setVisibility(Button.GONE);
+                    actionButton.setVisibility(View.GONE);
                 } else {
                     actionButton.setEnabled(true);
                     actionButton.setText("Complete Transaction");
                     actionButton.setOnClickListener(v -> completeTransaction());
                 }
-            } else { // isBuyer
+            } else {
                 if (buyerConf && !sellerConf) {
                     actionButton.setEnabled(false);
                     actionButton.setText("Waiting for Seller");
                 } else if (buyerConf && sellerConf) {
-                    actionButton.setVisibility(Button.GONE);
+                    actionButton.setVisibility(View.GONE);
                 } else {
                     actionButton.setEnabled(true);
                     actionButton.setText("Complete Transaction");
@@ -184,7 +230,7 @@ public class ItemDetailActivity extends AppCompatActivity {
                 }
             }
         } else if ("completed".equals(status)) {
-            actionButton.setVisibility(Button.GONE);
+            actionButton.setVisibility(View.GONE);
         }
     }
 
@@ -253,6 +299,30 @@ public class ItemDetailActivity extends AppCompatActivity {
                 .addOnFailureListener(e ->
                         Toast.makeText(this,
                                 "Failed to confirm transaction",
+                                Toast.LENGTH_SHORT).show());
+    }
+
+    private void deleteItem() {
+        if (currentItem == null) return;
+
+        if (!"available".equals(currentItem.getStatus())) {
+            Toast.makeText(this,
+                    "Only available items can be deleted",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        itemsRef.child(currentItem.getKey())
+                .removeValue()
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this,
+                            "Item deleted",
+                            Toast.LENGTH_SHORT).show();
+                    finish();
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this,
+                                "Failed to delete item",
                                 Toast.LENGTH_SHORT).show());
     }
 }

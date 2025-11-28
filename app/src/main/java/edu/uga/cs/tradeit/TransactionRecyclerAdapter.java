@@ -46,7 +46,7 @@ public class TransactionRecyclerAdapter
     class TransactionHolder extends RecyclerView.ViewHolder {
         TextView name, person, category, price;
         Button actionButton;
-        Button detailsButton; // optional, may be null if not in layout
+        Button detailsButton;
 
         public TransactionHolder(@NonNull View itemView) {
             super(itemView);
@@ -55,6 +55,7 @@ public class TransactionRecyclerAdapter
             category = itemView.findViewById(R.id.categoryTextView);
             price = itemView.findViewById(R.id.priceTextView);
             actionButton = itemView.findViewById(R.id.actionButton);
+            detailsButton = itemView.findViewById(R.id.detailsButton);
         }
     }
 
@@ -75,7 +76,17 @@ public class TransactionRecyclerAdapter
         holder.actionButton.setVisibility(View.GONE);
         holder.actionButton.setEnabled(false);
 
-        // --- category title lookup ---
+        holder.detailsButton.setVisibility(View.VISIBLE);
+        holder.detailsButton.setOnClickListener(v -> {
+            android.content.Context ctx = holder.itemView.getContext();
+            android.content.Intent intent =
+                    new android.content.Intent(ctx, ItemDetailActivity.class);
+            intent.putExtra("itemKey", item.getKey());
+            ctx.startActivity(intent);
+        });
+
+        holder.itemView.setOnClickListener(v -> holder.detailsButton.performClick());
+
         String catId = item.getCategoryId();
         if (catId == null || catId.isEmpty()) {
             holder.category.setText("Category: None");
@@ -107,7 +118,6 @@ public class TransactionRecyclerAdapter
                             if (seller == null) seller = "Unknown";
                             holder.person.setText("Seller: " + seller);
                         });
-                // no action button here – they confirm on detail page
                 holder.actionButton.setVisibility(View.GONE);
                 break;
 
@@ -196,28 +206,6 @@ public class TransactionRecyclerAdapter
                 }
                 holder.actionButton.setVisibility(View.GONE);
                 break;
-        }
-
-        // --- open details ---
-
-        // whole card opens detail
-        holder.itemView.setOnClickListener(v -> {
-            android.content.Context ctx = holder.itemView.getContext();
-            android.content.Intent intent =
-                    new android.content.Intent(ctx, ItemDetailActivity.class);
-            intent.putExtra("itemKey", item.getKey());
-            ctx.startActivity(intent);
-        });
-
-        // optional separate "Details" button if present in layout
-        if (holder.detailsButton != null) {
-            holder.detailsButton.setOnClickListener(v -> {
-                android.content.Context ctx = holder.itemView.getContext();
-                android.content.Intent intent =
-                        new android.content.Intent(ctx, ItemDetailActivity.class);
-                intent.putExtra("itemKey", item.getKey());
-                ctx.startActivity(intent);
-            });
         }
     }
 

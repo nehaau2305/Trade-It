@@ -8,6 +8,7 @@ import android.view.MenuItem;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 public class UserActivity extends AppCompatActivity {
@@ -21,6 +22,14 @@ public class UserActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        // set toolbar title and make it white
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle("TradeIt");
+        }
+        toolbar.setTitleTextColor(
+                ContextCompat.getColor(this, R.color.uga_white)
+        );
+
         // get fragment type from MainActivity
         String fragmentType = getIntent().getStringExtra("fragmentType");
 
@@ -33,9 +42,10 @@ public class UserActivity extends AppCompatActivity {
                 case "Home":
                     fragment = new HomeFragment();
                     break;
-                //other cases
+                // other cases (add as needed)
             }
         } // if else
+
         // update fragment container view
         if (fragment != null && savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction()
@@ -55,13 +65,13 @@ public class UserActivity extends AppCompatActivity {
     }
 
     @Override
-    public boolean onCreateOptionsMenu (Menu menu) {
+    public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.user_menu, menu);
         return true;
     }
 
     @Override
-    public boolean onOptionsItemSelected (@NonNull MenuItem item) {
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int itemId = item.getItemId();
         if (itemId == R.id.menu_home) {
             getSupportFragmentManager()

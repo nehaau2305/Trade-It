@@ -3,7 +3,9 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:background="@android:color/white">
 
     <LinearLayout
         android:id="@+id/buttonsLayout"
@@ -17,26 +19,37 @@
         <Button
             android:id="@+id/pendingButton"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="40dp"
             android:layout_weight="1"
-            android:layout_margin="10dp"
-            android:text="I'm Buying" />
+            android:layout_marginEnd="8dp"
+            android:text="I'm Buying"
+            android:textAllCaps="false"
+            android:textColor="@color/uga_white"
+            android:background="@drawable/btn_secondary_outline_red"
+            android:backgroundTint="@null" />
 
         <Button
             android:id="@+id/confirmSaleButton"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="40dp"
             android:layout_weight="1"
-            android:layout_margin="10dp"
-            android:text="I'm Selling" />
+            android:layout_marginEnd="8dp"
+            android:text="I'm Selling"
+            android:textAllCaps="false"
+            android:textColor="@color/uga_white"
+            android:background="@drawable/btn_secondary_outline_red"
+            android:backgroundTint="@null" />
 
         <Button
             android:id="@+id/completedButton"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="40dp"
             android:layout_weight="1"
-            android:layout_margin="10dp"
-            android:text="Completed" />
+            android:text="Completed"
+            android:textAllCaps="false"
+            android:textColor="@color/uga_white"
+            android:background="@drawable/btn_secondary_outline_red"
+            android:backgroundTint="@null" />
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
@@ -44,6 +57,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:scrollbars="vertical"
+        android:layout_marginTop="12dp"
         app:layout_constraintTop_toBottomOf="@+id/buttonsLayout"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"

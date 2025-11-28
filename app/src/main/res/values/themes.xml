@@ -1,9 +1,22 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Base.Theme.TradeIt" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+
+        <!-- UGA color scheme -->
+        <item name="colorPrimary">@color/uga_red</item>
+        <item name="colorOnPrimary">@color/uga_white</item>
+
+        <item name="colorPrimaryContainer">@color/uga_red_dark</item>
+        <item name="colorOnPrimaryContainer">@color/uga_white</item>
+
+        <item name="colorSecondary">@color/uga_red</item>
+        <item name="colorOnSecondary">@color/uga_white</item>
+
+        <!-- System bars -->
+        <item name="android:statusBarColor">@color/uga_red_dark</item>
+        <item name="android:navigationBarColor">@color/uga_red_dark</item>
     </style>
 
+    <!-- App theme -->
     <style name="Theme.TradeIt" parent="Base.Theme.TradeIt" />
 </resources>

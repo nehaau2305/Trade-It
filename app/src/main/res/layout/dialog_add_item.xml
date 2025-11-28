@@ -7,7 +7,6 @@
     android:layout_height="wrap_content"
     android:padding="16dp">
 
-    <!-- Dialog title -->
     <TextView
         android:id="@+id/addItemTitleText"
         android:layout_width="0dp"
@@ -19,7 +18,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Category dropdown (searchable) -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/itemCategoryLayout"
         android:layout_width="0dp"
@@ -39,7 +37,6 @@
             android:padding="8dp" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- Small button to create a new category -->
     <Button
         android:id="@+id/addCategoryButton"
         android:layout_width="wrap_content"
@@ -49,7 +46,6 @@
         app:layout_constraintBottom_toBottomOf="@id/itemCategoryLayout"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Item name field -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/itemNameLayout"
         android:layout_width="0dp"
@@ -68,7 +64,6 @@
             android:maxLines="1" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- Price field -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/priceLayout"
         android:layout_width="0dp"
@@ -87,7 +82,6 @@
             android:maxLines="1" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- NEW: Description field -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/descriptionLayout"
         android:layout_width="0dp"
@@ -107,7 +101,6 @@
             android:gravity="top|start" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- Free checkbox -->
     <CheckBox
         android:id="@+id/freeCheckBox"
         android:layout_width="wrap_content"
@@ -117,7 +110,6 @@
         app:layout_constraintTop_toBottomOf="@id/descriptionLayout"
         app:layout_constraintStart_toStartOf="parent" />
 
-    <!-- Bottom buttons: Cancel + Add -->
     <LinearLayout
         android:id="@+id/buttonRow"
         android:layout_width="0dp"

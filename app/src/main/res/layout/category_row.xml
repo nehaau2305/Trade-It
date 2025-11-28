@@ -21,4 +21,35 @@
         android:text="Created at ..."
         android:textSize="12sp"
         android:textColor="#777777" />
+
+    <TextView
+        android:id="@+id/categoryInfoTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Only categories with no active items can be edited or deleted."
+        android:textSize="11sp"
+        android:textColor="#888888"
+        android:layout_marginTop="4dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end"
+        android:layout_marginTop="6dp">
+
+        <Button
+            android:id="@+id/editCategoryButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Edit" />
+
+        <Button
+            android:id="@+id/deleteCategoryButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Delete"
+            android:layout_marginStart="12dp" />
+    </LinearLayout>
+
 </LinearLayout>

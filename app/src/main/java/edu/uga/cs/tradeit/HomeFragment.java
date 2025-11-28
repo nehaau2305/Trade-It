@@ -29,11 +29,12 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class HomeFragment extends Fragment {
 
-    // ---------- UI ----------
     private RecyclerView recyclerView;
     private ItemRecyclerAdapter adapter;
     private FloatingActionButton addItemButton;
@@ -47,11 +48,13 @@ public class HomeFragment extends Fragment {
     private RadioButton searchByItemRadio;
     private AutoCompleteTextView searchInputEditText;
 
-    // ---------- Data: items ----------
+    private RadioGroup sortModeGroup;
+    private RadioButton sortByNewestRadio;
+    private RadioButton sortByNameRadio;
+
     private List<Item> allItems = new ArrayList<>();
     private List<Item> itemsList = new ArrayList<>();
 
-    // ---------- Data: categories ----------
     private List<Category> categoryList = new ArrayList<>();
     private List<String> categoryTitles = new ArrayList<>();
     private String selectedCategoryKey = null;
@@ -59,6 +62,10 @@ public class HomeFragment extends Fragment {
     private static final int MODE_CATEGORY = 0;
     private static final int MODE_ITEM = 1;
     private int currentSearchMode = MODE_CATEGORY;
+
+    private static final int SORT_NEWEST = 0;
+    private static final int SORT_NAME = 1;
+    private int currentSortMode = SORT_NEWEST;
 
     public HomeFragment() { }
 
@@ -69,7 +76,6 @@ public class HomeFragment extends Fragment {
 
         View view = inflater.inflate(R.layout.fragment_home, container, false);
 
-        // hook up views
         recyclerView          = view.findViewById(R.id.recyclerView);
         addItemButton         = view.findViewById(R.id.floatingActionButton);
         logoutButton          = view.findViewById(R.id.logoutButton);
@@ -79,34 +85,31 @@ public class HomeFragment extends Fragment {
         searchByCategoryRadio = view.findViewById(R.id.searchByCategoryRadio);
         searchByItemRadio     = view.findViewById(R.id.searchByItemRadio);
         searchInputEditText   = view.findViewById(R.id.searchInputEditText);
+        sortModeGroup         = view.findViewById(R.id.sortModeGroup);
+        sortByNewestRadio     = view.findViewById(R.id.sortByNewestRadio);
+        sortByNameRadio       = view.findViewById(R.id.sortByNameRadio);
 
-        // RecyclerView layout (1 column portrait, 2 landscape)
         int orientation = getResources().getConfiguration().orientation;
         int spanCount = (orientation == Configuration.ORIENTATION_PORTRAIT) ? 1 : 2;
         recyclerView.setLayoutManager(new GridLayoutManager(requireContext(), spanCount));
 
-        adapter = new ItemRecyclerAdapter(itemsList, false);
+        adapter = new ItemRecyclerAdapter(itemsList);
         recyclerView.setAdapter(adapter);
 
-        // load data
         loadAvailableItems();
         loadCategories();
 
-        // FAB: add new item
         addItemButton.setOnClickListener(v -> {
             AddItemDialogFragment addItemDialogFragment = new AddItemDialogFragment();
             addItemDialogFragment.show(getParentFragmentManager(), "AddItemDialog");
         });
 
-        // logout
         logoutButton.setOnClickListener(v -> {
             FirebaseAuth.getInstance().signOut();
             Intent intent = new Intent(getActivity(), MainActivity.class);
             startActivity(intent);
             requireActivity().finish();
         });
-
-        // ---------- nav buttons ----------
 
         myItemsButton.setOnClickListener(v -> {
             requireActivity().getSupportFragmentManager()
@@ -124,7 +127,6 @@ public class HomeFragment extends Fragment {
                     .commit();
         });
 
-        // ---------- search toggle: category vs item ----------
         searchModeGroup.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.searchByCategoryRadio) {
                 currentSearchMode = MODE_CATEGORY;
@@ -141,10 +143,20 @@ public class HomeFragment extends Fragment {
             applyFilters();
         });
 
+        sortModeGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.sortByNewestRadio) {
+                currentSortMode = SORT_NEWEST;
+            } else if (checkedId == R.id.sortByNameRadio) {
+                currentSortMode = SORT_NAME;
+            }
+            applyFilters();
+        });
+
         searchInputEditText.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
-            @Override public void afterTextChanged(Editable s) {
+            @Override
+            public void afterTextChanged(Editable s) {
                 if (currentSearchMode == MODE_ITEM) {
                     applyFilters();
                 }
@@ -163,7 +175,6 @@ public class HomeFragment extends Fragment {
             }
         });
 
-        // default: category mode
         setCategorySuggestionsAdapter();
         searchInputEditText.setHint("Search category");
 
@@ -271,6 +282,31 @@ public class HomeFragment extends Fragment {
             }
         }
 
+        sortItemsList();
         adapter.notifyDataSetChanged();
+    }
+
+    private void sortItemsList() {
+        if (itemsList.size() <= 1) return;
+
+        if (currentSortMode == SORT_NEWEST) {
+            Collections.sort(itemsList, new Comparator<Item>() {
+                @Override
+                public int compare(Item a, Item b) {
+                    long ta = (long) a.getCreationTime();
+                    long tb = (long) b.getCreationTime();
+                    return Long.compare(tb, ta);
+                }
+            });
+        } else if (currentSortMode == SORT_NAME) {
+            Collections.sort(itemsList, new Comparator<Item>() {
+                @Override
+                public int compare(Item a, Item b) {
+                    String na = a.getName() == null ? "" : a.getName().toLowerCase();
+                    String nb = b.getName() == null ? "" : b.getName().toLowerCase();
+                    return na.compareTo(nb);
+                }
+            });
+        }
     }
 }
