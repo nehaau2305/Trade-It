@@ -27,11 +27,14 @@ import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class AddItemDialogFragment extends DialogFragment {
 
+    // UI
     private AutoCompleteTextView itemCategoryDropdown;
     private EditText itemNameEditText;
     private EditText priceEditText;
@@ -40,8 +43,12 @@ public class AddItemDialogFragment extends DialogFragment {
     private Button addButton;
     private Button cancelButton;
     private Button addCategoryButton;
-    private List<Category> categoryList = new ArrayList<>();
-    private List<String> categoryTitles = new ArrayList<>();
+
+    // categories
+    private final List<Category> categoryList = new ArrayList<>();
+    private final List<String> categoryTitles = new ArrayList<>();
+    // for duplicate check (case-insensitive)
+    private final Set<String> categoryTitlesLower = new HashSet<>();
     private String selectedCategoryKey = null;
 
     @NonNull
@@ -51,6 +58,7 @@ public class AddItemDialogFragment extends DialogFragment {
         LayoutInflater inflater = requireActivity().getLayoutInflater();
         View view = inflater.inflate(R.layout.dialog_add_item, null);
 
+        // hook up UI
         itemCategoryDropdown = view.findViewById(R.id.itemCategoryDropdown);
         itemNameEditText     = view.findViewById(R.id.itemNameEditText);
         priceEditText        = view.findViewById(R.id.priceEditText);
@@ -60,24 +68,11 @@ public class AddItemDialogFragment extends DialogFragment {
         cancelButton         = view.findViewById(R.id.cancelButton);
         addCategoryButton    = view.findViewById(R.id.addCategoryButton);
 
-        itemCategoryDropdown.setThreshold(0);
-
-        // open dropdown on click
-        itemCategoryDropdown.setOnClickListener(v -> itemCategoryDropdown.showDropDown());
-
-        itemCategoryDropdown.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus) {
-                itemCategoryDropdown.showDropDown();
-            }
-        });
-
         builder.setView(view);
         Dialog dialog = builder.create();
 
-        // load categories from Firebase
         loadCategories();
 
-        // when a category from dropdown is selected, remember its key
         itemCategoryDropdown.setOnItemClickListener((parent, v, position, id) -> {
             if (position >= 0 && position < categoryList.size()) {
                 Category selected = categoryList.get(position);
@@ -87,7 +82,6 @@ public class AddItemDialogFragment extends DialogFragment {
             }
         });
 
-        // price: limit to 2 decimal places
         priceEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void afterTextChanged(Editable s) {
@@ -99,15 +93,12 @@ public class AddItemDialogFragment extends DialogFragment {
                     }
                 }
             }
-
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
         });
 
-        // create new category button
         addCategoryButton.setOnClickListener(v -> showCreateCategoryDialog());
 
-        // free checkbox
         freeCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {
                 priceEditText.setText("");
@@ -119,6 +110,7 @@ public class AddItemDialogFragment extends DialogFragment {
 
         cancelButton.setOnClickListener(v -> dialog.dismiss());
 
+        // edit vs add logic
         String itemId = getArguments() != null ? getArguments().getString("itemId") : null;
         if (itemId != null) {
             DatabaseReference dbRef = FirebaseDatabase.getInstance()
@@ -130,23 +122,20 @@ public class AddItemDialogFragment extends DialogFragment {
                 if (item != null) {
                     itemNameEditText.setText(item.getName());
                     descriptionEditText.setText(item.getDescription());
-
                     if (item.getPrice() == 0) {
                         freeCheckBox.setChecked(true);
                     } else {
                         priceEditText.setText(String.valueOf(item.getPrice()));
                     }
-
-                    if (item.getCategoryId() != null) {
+                    if (item.getCategory() != null) {
                         DatabaseReference catDbRef = FirebaseDatabase.getInstance()
                                 .getReference("categories")
-                                .child(item.getCategoryId());
-
+                                .child(item.getCategory());
                         catDbRef.get().addOnSuccessListener(catSnapshot -> {
                             Category category = catSnapshot.getValue(Category.class);
                             if (category != null) {
                                 itemCategoryDropdown.setText(category.getTitle(), false);
-                                selectedCategoryKey = catSnapshot.getKey();
+                                selectedCategoryKey = category.getKey();
                             }
                         });
                     }
@@ -155,7 +144,6 @@ public class AddItemDialogFragment extends DialogFragment {
 
             addButton.setText("Save Changes");
             addButton.setOnClickListener(v -> editItem(itemId, dialog));
-
         } else {
             addButton.setText("Add Item");
             addButton.setOnClickListener(v -> addNewItem(dialog));
@@ -178,8 +166,11 @@ public class AddItemDialogFragment extends DialogFragment {
                 .addValueEventListener(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        if (!isAdded()) return;
+
                         categoryList.clear();
                         categoryTitles.clear();
+                        categoryTitlesLower.clear();
 
                         for (DataSnapshot catSnap : snapshot.getChildren()) {
                             Category c = catSnap.getValue(Category.class);
@@ -189,19 +180,27 @@ public class AddItemDialogFragment extends DialogFragment {
                                 }
                                 categoryList.add(c);
                                 categoryTitles.add(c.getTitle());
+
+                                String t = c.getTitle();
+                                if (t != null) {
+                                    categoryTitlesLower.add(t.trim().toLowerCase());
+                                }
                             }
                         }
 
-                        ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                                requireContext(),
-                                android.R.layout.simple_dropdown_item_1line,
-                                categoryTitles
-                        );
-                        itemCategoryDropdown.setAdapter(adapter);
+                        if (isAdded() && getContext() != null) {
+                            ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                                    requireContext(),
+                                    android.R.layout.simple_dropdown_item_1line,
+                                    categoryTitles
+                            );
+                            itemCategoryDropdown.setAdapter(adapter);
+                        }
                     }
 
                     @Override
                     public void onCancelled(@NonNull DatabaseError error) {
+                        if (!isAdded() || getContext() == null) return;
                         Toast.makeText(getContext(),
                                 "Failed to load categories",
                                 Toast.LENGTH_SHORT).show();
@@ -225,20 +224,6 @@ public class AddItemDialogFragment extends DialogFragment {
                         Toast.LENGTH_SHORT).show();
                 return;
             }
-
-            //duplicate check (case-insensitive)
-            String normalized = title.toLowerCase();
-            for (Category c : categoryList) {
-                String existing = c.getTitle();
-                if (existing != null &&
-                        existing.trim().toLowerCase().equals(normalized)) {
-                    Toast.makeText(getContext(),
-                            "Category already exists",
-                            Toast.LENGTH_SHORT).show();
-                    return;
-                }
-            }
-
             createCategoryInFirebase(title);
         });
 
@@ -251,6 +236,15 @@ public class AddItemDialogFragment extends DialogFragment {
         String currentUid = FirebaseAuth.getInstance().getUid();
         if (currentUid == null) {
             Toast.makeText(getContext(), "User not recognized", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // ---- duplicate check (case-insensitive) ----
+        String normalized = title.trim().toLowerCase();
+        if (categoryTitlesLower.contains(normalized)) {
+            Toast.makeText(getContext(),
+                    "Category already exists",
+                    Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -275,8 +269,10 @@ public class AddItemDialogFragment extends DialogFragment {
                             "Category created",
                             Toast.LENGTH_SHORT).show();
 
+                    // update local lists + lower-case set
                     categoryList.add(newCategory);
                     categoryTitles.add(title);
+                    categoryTitlesLower.add(normalized);
 
                     ArrayAdapter<String> adapter =
                             (ArrayAdapter<String>) itemCategoryDropdown.getAdapter();
@@ -286,7 +282,6 @@ public class AddItemDialogFragment extends DialogFragment {
 
                     itemCategoryDropdown.setText(title, false);
                     selectedCategoryKey = key;
-                    itemCategoryDropdown.showDropDown();
                 })
                 .addOnFailureListener(e ->
                         Toast.makeText(getContext(),
@@ -339,7 +334,7 @@ public class AddItemDialogFragment extends DialogFragment {
             Item newItem = new Item(
                     sellerId,
                     name,
-                    selectedCategoryKey,   // categoryId = key
+                    selectedCategoryKey,
                     time,
                     price,
                     "available",
@@ -369,37 +364,13 @@ public class AddItemDialogFragment extends DialogFragment {
         String name = itemNameEditText.getText().toString().trim();
         String desc = descriptionEditText.getText().toString().trim();
 
+        double price = freeCheckBox.isChecked()
+                ? 0
+                : Double.parseDouble(priceEditText.getText().toString().trim());
+
         if (name.isEmpty() || desc.isEmpty()) {
             Toast.makeText(requireContext(),
                     "Name & Description Required",
-                    Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        double price = 0.0;
-        if (freeCheckBox.isChecked()) {
-            price = 0.0;
-        } else {
-            String priceStr = priceEditText.getText().toString().trim();
-            if (priceStr.isEmpty()) {
-                Toast.makeText(requireContext(),
-                        "Enter a price or mark as free",
-                        Toast.LENGTH_SHORT).show();
-                return;
-            }
-            try {
-                price = Double.parseDouble(priceStr);
-            } catch (NumberFormatException e) {
-                Toast.makeText(requireContext(),
-                        "Price invalid",
-                        Toast.LENGTH_SHORT).show();
-                return;
-            }
-        }
-
-        if (selectedCategoryKey == null || selectedCategoryKey.isEmpty()) {
-            Toast.makeText(requireContext(),
-                    "Please select a category",
                     Toast.LENGTH_SHORT).show();
             return;
         }
