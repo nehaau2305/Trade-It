@@ -68,10 +68,16 @@ public class AddItemDialogFragment extends DialogFragment {
         cancelButton         = view.findViewById(R.id.cancelButton);
         addCategoryButton    = view.findViewById(R.id.addCategoryButton);
 
+        itemCategoryDropdown.setThreshold(0);
         builder.setView(view);
         Dialog dialog = builder.create();
 
         loadCategories();
+
+        itemCategoryDropdown.setOnClickListener(v -> itemCategoryDropdown.showDropDown());
+        itemCategoryDropdown.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) itemCategoryDropdown.showDropDown();
+        });
 
         itemCategoryDropdown.setOnItemClickListener((parent, v, position, id) -> {
             if (position >= 0 && position < categoryList.size()) {
