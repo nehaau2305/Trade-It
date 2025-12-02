@@ -32,7 +32,6 @@ import java.util.Map;
 
 public class AddItemDialogFragment extends DialogFragment {
 
-    // UI
     private AutoCompleteTextView itemCategoryDropdown;
     private EditText itemNameEditText;
     private EditText priceEditText;
@@ -41,8 +40,6 @@ public class AddItemDialogFragment extends DialogFragment {
     private Button addButton;
     private Button cancelButton;
     private Button addCategoryButton;
-
-    // categories
     private List<Category> categoryList = new ArrayList<>();
     private List<String> categoryTitles = new ArrayList<>();
     private String selectedCategoryKey = null;
@@ -54,7 +51,6 @@ public class AddItemDialogFragment extends DialogFragment {
         LayoutInflater inflater = requireActivity().getLayoutInflater();
         View view = inflater.inflate(R.layout.dialog_add_item, null);
 
-        // hook up UI
         itemCategoryDropdown = view.findViewById(R.id.itemCategoryDropdown);
         itemNameEditText     = view.findViewById(R.id.itemNameEditText);
         priceEditText        = view.findViewById(R.id.priceEditText);
@@ -64,11 +60,24 @@ public class AddItemDialogFragment extends DialogFragment {
         cancelButton         = view.findViewById(R.id.cancelButton);
         addCategoryButton    = view.findViewById(R.id.addCategoryButton);
 
+        itemCategoryDropdown.setThreshold(0);
+
+        // open dropdown on click
+        itemCategoryDropdown.setOnClickListener(v -> itemCategoryDropdown.showDropDown());
+
+        itemCategoryDropdown.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                itemCategoryDropdown.showDropDown();
+            }
+        });
+
         builder.setView(view);
         Dialog dialog = builder.create();
 
+        // load categories from Firebase
         loadCategories();
 
+        // when a category from dropdown is selected, remember its key
         itemCategoryDropdown.setOnItemClickListener((parent, v, position, id) -> {
             if (position >= 0 && position < categoryList.size()) {
                 Category selected = categoryList.get(position);
@@ -78,6 +87,7 @@ public class AddItemDialogFragment extends DialogFragment {
             }
         });
 
+        // price: limit to 2 decimal places
         priceEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void afterTextChanged(Editable s) {
@@ -85,20 +95,19 @@ public class AddItemDialogFragment extends DialogFragment {
                 if (txt.contains(".")) {
                     int i = txt.indexOf(".");
                     if (txt.length() - i - 1 > 2) {
-                        s.delete(i+3, txt.length());
+                        s.delete(i + 3, txt.length());
                     }
                 }
             }
 
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) { }
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
         });
 
+        // create new category button
         addCategoryButton.setOnClickListener(v -> showCreateCategoryDialog());
 
+        // free checkbox
         freeCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {
                 priceEditText.setText("");
@@ -107,43 +116,53 @@ public class AddItemDialogFragment extends DialogFragment {
                 priceEditText.setEnabled(true);
             }
         });
+
         cancelButton.setOnClickListener(v -> dialog.dismiss());
 
-        // if item id exists, edit item, else add item
         String itemId = getArguments() != null ? getArguments().getString("itemId") : null;
         if (itemId != null) {
-            DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("items").child(itemId);
-            // pre fill item box with existing data
+            DatabaseReference dbRef = FirebaseDatabase.getInstance()
+                    .getReference("items")
+                    .child(itemId);
+
             dbRef.get().addOnSuccessListener(snapshot -> {
-               Item item = snapshot.getValue(Item.class);
-               if (item != null) {
-                   itemNameEditText.setText(item.getName());
-                   descriptionEditText.setText(item.getDescription());
-                   if (item.getPrice() == 0) {
-                       freeCheckBox.setChecked(true);
-                   } else {
-                       priceEditText.setText(String.valueOf(item.getPrice()));
-                   }
-                   if (item.getCategory() != null) {
-                       DatabaseReference catDbRef = FirebaseDatabase.getInstance().getReference("categories").child(item.getCategory());
-                       catDbRef.get().addOnSuccessListener(catSnapshot -> {
-                          Category category = catSnapshot.getValue(Category.class);
-                          if (category != null) {
-                              itemCategoryDropdown.setText(category.getTitle(), false);
-                              selectedCategoryKey = category.getKey();
-                          }
-                       });
-                   }
-               } // if item is not null
+                Item item = snapshot.getValue(Item.class);
+                if (item != null) {
+                    itemNameEditText.setText(item.getName());
+                    descriptionEditText.setText(item.getDescription());
+
+                    if (item.getPrice() == 0) {
+                        freeCheckBox.setChecked(true);
+                    } else {
+                        priceEditText.setText(String.valueOf(item.getPrice()));
+                    }
+
+                    if (item.getCategoryId() != null) {
+                        DatabaseReference catDbRef = FirebaseDatabase.getInstance()
+                                .getReference("categories")
+                                .child(item.getCategoryId());
+
+                        catDbRef.get().addOnSuccessListener(catSnapshot -> {
+                            Category category = catSnapshot.getValue(Category.class);
+                            if (category != null) {
+                                itemCategoryDropdown.setText(category.getTitle(), false);
+                                selectedCategoryKey = catSnapshot.getKey();
+                            }
+                        });
+                    }
+                }
             });
+
             addButton.setText("Save Changes");
             addButton.setOnClickListener(v -> editItem(itemId, dialog));
+
         } else {
             addButton.setText("Add Item");
             addButton.setOnClickListener(v -> addNewItem(dialog));
         }
+
         return dialog;
-    } // onCreateDialog
+    }
 
     private void loadCategories() {
         String currentUid = FirebaseAuth.getInstance().getUid();
@@ -206,6 +225,20 @@ public class AddItemDialogFragment extends DialogFragment {
                         Toast.LENGTH_SHORT).show();
                 return;
             }
+
+            //duplicate check (case-insensitive)
+            String normalized = title.toLowerCase();
+            for (Category c : categoryList) {
+                String existing = c.getTitle();
+                if (existing != null &&
+                        existing.trim().toLowerCase().equals(normalized)) {
+                    Toast.makeText(getContext(),
+                            "Category already exists",
+                            Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            }
+
             createCategoryInFirebase(title);
         });
 
@@ -253,6 +286,7 @@ public class AddItemDialogFragment extends DialogFragment {
 
                     itemCategoryDropdown.setText(title, false);
                     selectedCategoryKey = key;
+                    itemCategoryDropdown.showDropDown();
                 })
                 .addOnFailureListener(e ->
                         Toast.makeText(getContext(),
@@ -305,7 +339,7 @@ public class AddItemDialogFragment extends DialogFragment {
             Item newItem = new Item(
                     sellerId,
                     name,
-                    selectedCategoryKey,
+                    selectedCategoryKey,   // categoryId = key
                     time,
                     price,
                     "available",
@@ -329,31 +363,67 @@ public class AddItemDialogFragment extends DialogFragment {
                     "User not recognized",
                     Toast.LENGTH_SHORT).show();
         }
-    } // addNewItem
+    }
 
     private void editItem(String itemId, Dialog dialog) {
         String name = itemNameEditText.getText().toString().trim();
         String desc = descriptionEditText.getText().toString().trim();
-        double price = freeCheckBox.isChecked() ? 0 : Double.parseDouble(priceEditText.getText().toString().trim());
+
         if (name.isEmpty() || desc.isEmpty()) {
-            Toast.makeText(requireContext(),"Name & Description Required", Toast.LENGTH_SHORT). show();
+            Toast.makeText(requireContext(),
+                    "Name & Description Required",
+                    Toast.LENGTH_SHORT).show();
             return;
         }
 
-        //update only the specified values preserving sellerId, creation time, & status
+        double price = 0.0;
+        if (freeCheckBox.isChecked()) {
+            price = 0.0;
+        } else {
+            String priceStr = priceEditText.getText().toString().trim();
+            if (priceStr.isEmpty()) {
+                Toast.makeText(requireContext(),
+                        "Enter a price or mark as free",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+            try {
+                price = Double.parseDouble(priceStr);
+            } catch (NumberFormatException e) {
+                Toast.makeText(requireContext(),
+                        "Price invalid",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+
+        if (selectedCategoryKey == null || selectedCategoryKey.isEmpty()) {
+            Toast.makeText(requireContext(),
+                    "Please select a category",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         Map<String, Object> updates = new HashMap<>();
         updates.put("name", name);
         updates.put("description", desc);
         updates.put("price", price);
         updates.put("categoryId", selectedCategoryKey);
 
-        DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("items").child(itemId);
-        dbRef.updateChildren(updates).addOnSuccessListener(unused -> {
-            Toast.makeText(requireContext(), "Successfully Updated Item", Toast.LENGTH_SHORT).show();
-            dialog.dismiss();
-        }).addOnFailureListener(e -> {
-            Toast.makeText(requireContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        });
+        DatabaseReference dbRef = FirebaseDatabase.getInstance()
+                .getReference("items")
+                .child(itemId);
 
+        dbRef.updateChildren(updates)
+                .addOnSuccessListener(unused -> {
+                    Toast.makeText(requireContext(),
+                            "Successfully Updated Item",
+                            Toast.LENGTH_SHORT).show();
+                    dialog.dismiss();
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(requireContext(),
+                                "Error: " + e.getMessage(),
+                                Toast.LENGTH_SHORT).show());
     }
 }

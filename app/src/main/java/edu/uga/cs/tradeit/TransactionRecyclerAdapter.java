@@ -16,6 +16,7 @@ import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class TransactionRecyclerAdapter
@@ -25,10 +26,10 @@ public class TransactionRecyclerAdapter
     private String currentTab = "pending";
     private String currentUId = FirebaseAuth.getInstance().getUid();
 
-    // for category title lookup
-    private DatabaseReference categoriesRef =
+    // category title lookup
+    private final DatabaseReference categoriesRef =
             FirebaseDatabase.getInstance().getReference("categories");
-    private Map<String, String> categoryCache = new HashMap<>();
+    private final Map<String, String> categoryCache = new HashMap<>();
 
     public TransactionRecyclerAdapter(List<Item> itemsList,
                                       String currentUId,
@@ -50,10 +51,10 @@ public class TransactionRecyclerAdapter
 
         public TransactionHolder(@NonNull View itemView) {
             super(itemView);
-            name = itemView.findViewById(R.id.nameTextView);
-            person = itemView.findViewById(R.id.personTextView);
-            category = itemView.findViewById(R.id.categoryTextView);
-            price = itemView.findViewById(R.id.priceTextView);
+            name         = itemView.findViewById(R.id.nameTextView);
+            person       = itemView.findViewById(R.id.personTextView);
+            category     = itemView.findViewById(R.id.categoryTextView);
+            price        = itemView.findViewById(R.id.priceTextView);
             actionButton = itemView.findViewById(R.id.actionButton);
             detailsButton = itemView.findViewById(R.id.detailsButton);
         }
@@ -72,21 +73,12 @@ public class TransactionRecyclerAdapter
         Item item = itemsList.get(position);
 
         holder.name.setText(item.getName());
-        holder.price.setText("$" + item.getPrice());
-        holder.actionButton.setVisibility(View.GONE);
-        holder.actionButton.setEnabled(false);
 
-        holder.detailsButton.setVisibility(View.VISIBLE);
-        holder.detailsButton.setOnClickListener(v -> {
-            android.content.Context ctx = holder.itemView.getContext();
-            android.content.Intent intent =
-                    new android.content.Intent(ctx, ItemDetailActivity.class);
-            intent.putExtra("itemKey", item.getKey());
-            ctx.startActivity(intent);
-        });
+        // ---- PRICE: always 2 decimal places ----
+        double p = item.getPrice();
+        holder.price.setText(String.format(Locale.US, "$%.2f", p));
 
-        holder.itemView.setOnClickListener(v -> holder.detailsButton.performClick());
-
+        // ---- category title ----
         String catId = item.getCategoryId();
         if (catId == null || catId.isEmpty()) {
             holder.category.setText("Category: None");
@@ -108,9 +100,13 @@ public class TransactionRecyclerAdapter
         DatabaseReference usersDbRef =
                 FirebaseDatabase.getInstance().getReference("users");
 
+        // reset action button each bind
+        holder.actionButton.setOnClickListener(null);
+        holder.actionButton.setVisibility(View.GONE);
+        holder.actionButton.setEnabled(false);
+
         switch (currentTab) {
-            case "pending":
-                // items where current user is buyer & status = pending
+            case "pending": // I'm Buying
                 usersDbRef.child(item.getSellerId()).child("name")
                         .get()
                         .addOnSuccessListener(snapshot -> {
@@ -118,11 +114,11 @@ public class TransactionRecyclerAdapter
                             if (seller == null) seller = "Unknown";
                             holder.person.setText("Seller: " + seller);
                         });
+
                 holder.actionButton.setVisibility(View.GONE);
                 break;
 
-            case "confirm":
-                // seller view – confirm sale
+            case "confirm": // I'm Selling – confirm sale
                 usersDbRef.child(item.getBuyerId()).child("name")
                         .get()
                         .addOnSuccessListener(snapshot -> {
@@ -137,7 +133,6 @@ public class TransactionRecyclerAdapter
                 boolean sellerConf = item.isSellerConfirmed();
 
                 if (sellerConf && !buyerConf) {
-                    // seller already confirmed: waiting for buyer
                     holder.actionButton.setEnabled(false);
                     holder.actionButton.setText("Waiting for Buyer");
                 } else if (sellerConf && buyerConf) {
@@ -186,7 +181,6 @@ public class TransactionRecyclerAdapter
                 break;
 
             case "completed":
-                // show other party’s name
                 if (currentUId.equals(item.getBuyerId())) {
                     usersDbRef.child(item.getSellerId()).child("name")
                             .get()
@@ -207,6 +201,18 @@ public class TransactionRecyclerAdapter
                 holder.actionButton.setVisibility(View.GONE);
                 break;
         }
+
+        // --- DETAILS button & whole-card click ---
+        holder.detailsButton.setVisibility(View.VISIBLE);
+        holder.detailsButton.setOnClickListener(v -> {
+            android.content.Context ctx = holder.itemView.getContext();
+            android.content.Intent intent =
+                    new android.content.Intent(ctx, ItemDetailActivity.class);
+            intent.putExtra("itemKey", item.getKey());
+            ctx.startActivity(intent);
+        });
+
+        holder.itemView.setOnClickListener(v -> holder.detailsButton.performClick());
     }
 
     @Override

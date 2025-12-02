@@ -29,12 +29,13 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class HomeFragment extends Fragment {
 
+    // ---------- UI ----------
     private RecyclerView recyclerView;
     private ItemRecyclerAdapter adapter;
     private FloatingActionButton addItemButton;
@@ -48,13 +49,11 @@ public class HomeFragment extends Fragment {
     private RadioButton searchByItemRadio;
     private AutoCompleteTextView searchInputEditText;
 
-    private RadioGroup sortModeGroup;
-    private RadioButton sortByNewestRadio;
-    private RadioButton sortByNameRadio;
-
+    // ---------- Data: items ----------
     private List<Item> allItems = new ArrayList<>();
     private List<Item> itemsList = new ArrayList<>();
 
+    // ---------- Data: categories ----------
     private List<Category> categoryList = new ArrayList<>();
     private List<String> categoryTitles = new ArrayList<>();
     private String selectedCategoryKey = null;
@@ -62,10 +61,6 @@ public class HomeFragment extends Fragment {
     private static final int MODE_CATEGORY = 0;
     private static final int MODE_ITEM = 1;
     private int currentSearchMode = MODE_CATEGORY;
-
-    private static final int SORT_NEWEST = 0;
-    private static final int SORT_NAME = 1;
-    private int currentSortMode = SORT_NEWEST;
 
     public HomeFragment() { }
 
@@ -76,6 +71,7 @@ public class HomeFragment extends Fragment {
 
         View view = inflater.inflate(R.layout.fragment_home, container, false);
 
+        // hook up views
         recyclerView          = view.findViewById(R.id.recyclerView);
         addItemButton         = view.findViewById(R.id.floatingActionButton);
         logoutButton          = view.findViewById(R.id.logoutButton);
@@ -85,10 +81,8 @@ public class HomeFragment extends Fragment {
         searchByCategoryRadio = view.findViewById(R.id.searchByCategoryRadio);
         searchByItemRadio     = view.findViewById(R.id.searchByItemRadio);
         searchInputEditText   = view.findViewById(R.id.searchInputEditText);
-        sortModeGroup         = view.findViewById(R.id.sortModeGroup);
-        sortByNewestRadio     = view.findViewById(R.id.sortByNewestRadio);
-        sortByNameRadio       = view.findViewById(R.id.sortByNameRadio);
 
+        // RecyclerView layout (1 column portrait, 2 landscape)
         int orientation = getResources().getConfiguration().orientation;
         int spanCount = (orientation == Configuration.ORIENTATION_PORTRAIT) ? 1 : 2;
         recyclerView.setLayoutManager(new GridLayoutManager(requireContext(), spanCount));
@@ -96,14 +90,17 @@ public class HomeFragment extends Fragment {
         adapter = new ItemRecyclerAdapter(itemsList);
         recyclerView.setAdapter(adapter);
 
+        // load data
         loadAvailableItems();
         loadCategories();
 
+        // FAB: add new item
         addItemButton.setOnClickListener(v -> {
             AddItemDialogFragment addItemDialogFragment = new AddItemDialogFragment();
             addItemDialogFragment.show(getParentFragmentManager(), "AddItemDialog");
         });
 
+        // logout
         logoutButton.setOnClickListener(v -> {
             FirebaseAuth.getInstance().signOut();
             Intent intent = new Intent(getActivity(), MainActivity.class);
@@ -111,6 +108,7 @@ public class HomeFragment extends Fragment {
             requireActivity().finish();
         });
 
+        // nav buttons
         myItemsButton.setOnClickListener(v -> {
             requireActivity().getSupportFragmentManager()
                     .beginTransaction()
@@ -127,10 +125,12 @@ public class HomeFragment extends Fragment {
                     .commit();
         });
 
+        // search toggle: category vs item
         searchModeGroup.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.searchByCategoryRadio) {
                 currentSearchMode = MODE_CATEGORY;
                 searchInputEditText.setText("");
+                selectedCategoryKey = null;
                 searchInputEditText.setHint("Search category");
                 setCategorySuggestionsAdapter();
             } else if (checkedId == R.id.searchByItemRadio) {
@@ -143,26 +143,18 @@ public class HomeFragment extends Fragment {
             applyFilters();
         });
 
-        sortModeGroup.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == R.id.sortByNewestRadio) {
-                currentSortMode = SORT_NEWEST;
-            } else if (checkedId == R.id.sortByNameRadio) {
-                currentSortMode = SORT_NAME;
-            }
-            applyFilters();
-        });
-
+        // text changes
         searchInputEditText.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
-            @Override
-            public void afterTextChanged(Editable s) {
-                if (currentSearchMode == MODE_ITEM) {
-                    applyFilters();
-                }
+            @Override public void afterTextChanged(Editable s) {
+                // Now we also react to text in CATEGORY mode (by title),
+                // not only to dropdown clicks.
+                applyFilters();
             }
         });
 
+        // dropdown selection for category mode
         searchInputEditText.setOnItemClickListener((parent, v, position, id) -> {
             if (currentSearchMode == MODE_CATEGORY) {
                 if (position >= 0 && position < categoryList.size()) {
@@ -175,6 +167,7 @@ public class HomeFragment extends Fragment {
             }
         });
 
+        // default: category mode
         setCategorySuggestionsAdapter();
         searchInputEditText.setHint("Search category");
 
@@ -256,19 +249,57 @@ public class HomeFragment extends Fragment {
         searchInputEditText.setAdapter(dropdownAdapter);
     }
 
+    /**
+     * Apply both category / item filters based on current mode.
+     * CATEGORY mode now supports:
+     *  - selecting from dropdown (uses categoryId)
+     *  - typing part of a category title (matches by title).
+     */
     private void applyFilters() {
         itemsList.clear();
 
         if (currentSearchMode == MODE_CATEGORY) {
-            for (Item item : allItems) {
-                if (selectedCategoryKey == null || selectedCategoryKey.isEmpty()) {
-                    itemsList.add(item);
-                } else if (selectedCategoryKey.equals(item.getCategoryId())) {
-                    itemsList.add(item);
+            String query = searchInputEditText.getText()
+                    .toString()
+                    .trim()
+                    .toLowerCase();
+
+            // Build allowed category IDs
+            Set<String> allowedCategoryIds = new HashSet<>();
+
+            // 1) If user picked from dropdown, we trust selectedCategoryKey
+            if (selectedCategoryKey != null && !selectedCategoryKey.isEmpty()) {
+                allowedCategoryIds.add(selectedCategoryKey);
+            }
+
+            // 2) If user typed text, match titles that contain the query
+            if (!query.isEmpty()) {
+                for (Category c : categoryList) {
+                    String title = c.getTitle();
+                    if (title != null && title.toLowerCase().contains(query)) {
+                        allowedCategoryIds.add(c.getKey());
+                    }
                 }
             }
-        } else {
-            String query = searchInputEditText.getText().toString().trim().toLowerCase();
+
+            // 3) Filter items
+            if (allowedCategoryIds.isEmpty()) {
+                // No specific filter -> show everything
+                itemsList.addAll(allItems);
+            } else {
+                for (Item item : allItems) {
+                    String catId = item.getCategoryId();
+                    if (catId != null && allowedCategoryIds.contains(catId)) {
+                        itemsList.add(item);
+                    }
+                }
+            }
+
+        } else { // MODE_ITEM
+            String query = searchInputEditText.getText()
+                    .toString()
+                    .trim()
+                    .toLowerCase();
 
             for (Item item : allItems) {
                 if (query.isEmpty()) {
@@ -282,31 +313,6 @@ public class HomeFragment extends Fragment {
             }
         }
 
-        sortItemsList();
         adapter.notifyDataSetChanged();
-    }
-
-    private void sortItemsList() {
-        if (itemsList.size() <= 1) return;
-
-        if (currentSortMode == SORT_NEWEST) {
-            Collections.sort(itemsList, new Comparator<Item>() {
-                @Override
-                public int compare(Item a, Item b) {
-                    long ta = (long) a.getCreationTime();
-                    long tb = (long) b.getCreationTime();
-                    return Long.compare(tb, ta);
-                }
-            });
-        } else if (currentSortMode == SORT_NAME) {
-            Collections.sort(itemsList, new Comparator<Item>() {
-                @Override
-                public int compare(Item a, Item b) {
-                    String na = a.getName() == null ? "" : a.getName().toLowerCase();
-                    String nb = b.getName() == null ? "" : b.getName().toLowerCase();
-                    return na.compareTo(nb);
-                }
-            });
-        }
     }
 }
