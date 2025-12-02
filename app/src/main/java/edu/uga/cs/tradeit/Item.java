@@ -2,23 +2,21 @@ package edu.uga.cs.tradeit;
 
 public class Item {
 
-    private String key;          // Firebase key
-    private String sellerId;     // UID of seller
+    private String key;
+    private String sellerId;
     private String name;
-    private String categoryId;   // category node key
+    private String categoryId;
     private long creationTime;
     private double price;
-    private String buyerId;      // UID of buyer (if any)
-    private String status;       // "available", "pending", "completed"
-
-    // Description for detail page
+    private String buyerId;
+    private String status;
     private String description;
-
-    // confirmation flags
     private boolean buyerConfirmed;
     private boolean sellerConfirmed;
 
-    // Firebase empty constructor
+    // NEW: snapshot of the category title (for history / completed transactions)
+    private String categoryTitle;
+
     public Item() {
         this.key = null;
         this.sellerId = null;
@@ -31,9 +29,9 @@ public class Item {
         this.description = null;
         this.buyerConfirmed = false;
         this.sellerConfirmed = false;
+        this.categoryTitle = null;
     }
 
-    // Main constructor used when creating an item
     public Item(String sellerId,
                 String name,
                 String categoryId,
@@ -42,7 +40,7 @@ public class Item {
                 String status,
                 String description) {
 
-        this.key = null; // set after push()
+        this.key = null;
         this.sellerId = sellerId;
         this.name = name;
         this.categoryId = categoryId;
@@ -53,9 +51,8 @@ public class Item {
         this.description = description;
         this.buyerConfirmed = false;
         this.sellerConfirmed = false;
+        this.categoryTitle = null; // set separately
     }
-
-    // --- getters/setters ---
 
     public String getKey() { return key; }
     public void setKey(String key) { this.key = key; }
@@ -69,6 +66,7 @@ public class Item {
     public String getCategoryId() { return categoryId; }
     public void setCategoryId(String categoryId) { this.categoryId = categoryId; }
 
+    // you still have these helpers
     public String getCategory() { return categoryId; }
     public void setCategory(String categoryId) { this.categoryId = categoryId; }
 
@@ -92,4 +90,8 @@ public class Item {
 
     public boolean isSellerConfirmed() { return sellerConfirmed; }
     public void setSellerConfirmed(boolean sellerConfirmed) { this.sellerConfirmed = sellerConfirmed; }
+
+    // NEW: categoryTitle snapshot
+    public String getCategoryTitle() { return categoryTitle; }
+    public void setCategoryTitle(String categoryTitle) { this.categoryTitle = categoryTitle; }
 }
