@@ -3,6 +3,8 @@ package edu.uga.cs.tradeit;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -74,6 +76,25 @@ public class AddItemDialogFragment extends DialogFragment {
             } else {
                 selectedCategoryKey = null;
             }
+        });
+
+        priceEditText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void afterTextChanged(Editable s) {
+                String txt = s.toString();
+                if (txt.contains(".")) {
+                    int i = txt.indexOf(".");
+                    if (txt.length() - i - 1 > 2) {
+                        s.delete(i+3, txt.length());
+                    }
+                }
+            }
+
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) { }
         });
 
         addCategoryButton.setOnClickListener(v -> showCreateCategoryDialog());
