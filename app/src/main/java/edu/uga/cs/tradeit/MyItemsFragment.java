@@ -40,8 +40,8 @@ public class MyItemsFragment extends Fragment {
 
         View view = inflater.inflate(R.layout.fragment_my_items, container, false);
 
-        recyclerView      = view.findViewById(R.id.myItemsRecyclerView);
-        categoriesButton  = view.findViewById(R.id.categoriesButton);
+        recyclerView     = view.findViewById(R.id.myItemsRecyclerView);
+        categoriesButton = view.findViewById(R.id.categoriesButton);
 
         int orientation = getResources().getConfiguration().orientation;
         int spanCount = (orientation == Configuration.ORIENTATION_PORTRAIT) ? 1 : 2;
@@ -85,7 +85,12 @@ public class MyItemsFragment extends Fragment {
                                 if (item.getKey() == null || item.getKey().isEmpty()) {
                                     item.setKey(itemSnapshot.getKey());
                                 }
-                                myItems.add(item);
+
+                                String status = item.getStatus();
+                                // Only add if NOT completed
+                                if (status == null || !status.equals("completed")) {
+                                    myItems.add(item);
+                                }
                             }
                         }
 
