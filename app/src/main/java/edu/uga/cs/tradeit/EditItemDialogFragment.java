@@ -40,7 +40,7 @@ public class EditItemDialogFragment extends DialogFragment {
     private String itemKey;
     private Item currentItem;
 
-    private EditText nameEditText, priceEditText;
+    private EditText nameEditText, priceEditText, descriptionEditText;
     private AutoCompleteTextView categoryDropdown;
     private CheckBox freeCheckBox;
     private Button addButton, cancelButton, addCategoryButton;
@@ -51,6 +51,7 @@ public class EditItemDialogFragment extends DialogFragment {
 
     private List<Category> categoryList = new ArrayList<>();
     private List<String> categoryTitles = new ArrayList<>();
+    private List<String> lowerTitles = new ArrayList<>();
     private String selectedCategoryId = null;
 
     @NonNull
@@ -66,13 +67,14 @@ public class EditItemDialogFragment extends DialogFragment {
         LayoutInflater inflater = requireActivity().getLayoutInflater();
         View view = inflater.inflate(R.layout.dialog_add_item, null);
 
-        nameEditText      = view.findViewById(R.id.itemNameEditText);
-        priceEditText     = view.findViewById(R.id.priceEditText);
-        categoryDropdown  = view.findViewById(R.id.itemCategoryDropdown);
-        freeCheckBox      = view.findViewById(R.id.freeCheckBox);
-        addButton         = view.findViewById(R.id.addButton);
-        cancelButton      = view.findViewById(R.id.cancelButton);
-        addCategoryButton = view.findViewById(R.id.addCategoryButton);
+        nameEditText        = view.findViewById(R.id.itemNameEditText);
+        priceEditText       = view.findViewById(R.id.priceEditText);
+        descriptionEditText = view.findViewById(R.id.descriptionEditText);
+        categoryDropdown    = view.findViewById(R.id.itemCategoryDropdown);
+        freeCheckBox        = view.findViewById(R.id.freeCheckBox);
+        addButton           = view.findViewById(R.id.addButton);
+        cancelButton        = view.findViewById(R.id.cancelButton);
+        addCategoryButton   = view.findViewById(R.id.addCategoryButton);
 
         TextView titleText = view.findViewById(R.id.addItemTitleText);
         if (titleText != null) {
@@ -92,6 +94,14 @@ public class EditItemDialogFragment extends DialogFragment {
         cancelButton.setOnClickListener(v -> dismiss());
 
         addCategoryButton.setOnClickListener(v -> showNewCategoryDialog());
+
+        // Show dropdown when field tapped or focused
+        categoryDropdown.setOnClickListener(v -> categoryDropdown.showDropDown());
+        categoryDropdown.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                categoryDropdown.showDropDown();
+            }
+        });
 
         builder.setView(view);
         Dialog dialog = builder.create();
@@ -121,6 +131,14 @@ public class EditItemDialogFragment extends DialogFragment {
                 return;
             }
 
+            String lower = title.toLowerCase();
+            if (lowerTitles.contains(lower)) {
+                Toast.makeText(getContext(),
+                        "Category already exists",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             String creatorId = (currentUid != null) ? currentUid : "unknown";
             long now = System.currentTimeMillis();
 
@@ -139,7 +157,9 @@ public class EditItemDialogFragment extends DialogFragment {
                     .addOnSuccessListener(aVoid -> {
                         categoryList.add(newCat);
                         categoryTitles.add(title);
+                        lowerTitles.add(lower);
 
+                        if (!isAdded()) return;
                         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                                 requireContext(),
                                 android.R.layout.simple_dropdown_item_1line,
@@ -160,7 +180,8 @@ public class EditItemDialogFragment extends DialogFragment {
                                     Toast.LENGTH_SHORT).show());
         });
 
-        b.setNegativeButton("Cancel", (dialogInterface, which) -> dialogInterface.dismiss());
+        b.setNegativeButton("Cancel",
+                (dialogInterface, which) -> dialogInterface.dismiss());
         b.show();
     }
 
@@ -194,6 +215,13 @@ public class EditItemDialogFragment extends DialogFragment {
                         priceEditText.setText(String.valueOf(p));
                     }
 
+                    String desc = item.getDescription();
+                    if (desc != null) {
+                        descriptionEditText.setText(desc);
+                    } else {
+                        descriptionEditText.setText("");
+                    }
+
                     selectedCategoryId = item.getCategoryId();
                     applySelectedCategoryToDropdown();
                 })
@@ -206,11 +234,19 @@ public class EditItemDialogFragment extends DialogFragment {
     }
 
     private void loadCategories() {
-        categoriesRef.orderByChild("title")
+        if (currentUid == null) {
+            Toast.makeText(getContext(),
+                    "User not recognized",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        categoriesRef.orderByChild("creatorId").equalTo(currentUid)
                 .get()
                 .addOnSuccessListener(snapshot -> {
                     categoryList.clear();
                     categoryTitles.clear();
+                    lowerTitles.clear();
 
                     for (com.google.firebase.database.DataSnapshot catSnap : snapshot.getChildren()) {
                         Category c = catSnap.getValue(Category.class);
@@ -220,8 +256,11 @@ public class EditItemDialogFragment extends DialogFragment {
                             }
                             categoryList.add(c);
                             categoryTitles.add(c.getTitle());
+                            lowerTitles.add(c.getTitle().toLowerCase());
                         }
                     }
+
+                    if (!isAdded()) return;
 
                     ArrayAdapter<String> adapter = new ArrayAdapter<>(
                             requireContext(),
@@ -261,9 +300,15 @@ public class EditItemDialogFragment extends DialogFragment {
 
         String name     = nameEditText.getText().toString().trim();
         String priceStr = priceEditText.getText().toString().trim();
+        String desc     = descriptionEditText.getText().toString().trim();
 
         if (name.isEmpty()) {
             nameEditText.setError("Name required");
+            return;
+        }
+
+        if (desc.isEmpty()) {
+            descriptionEditText.setError("Description required");
             return;
         }
 
@@ -302,6 +347,7 @@ public class EditItemDialogFragment extends DialogFragment {
         updates.put("name", name);
         updates.put("price", priceVal);
         updates.put("categoryId", selectedCategoryId);
+        updates.put("description", desc);
 
         itemsRef.child(currentItem.getKey())
                 .updateChildren(updates)
