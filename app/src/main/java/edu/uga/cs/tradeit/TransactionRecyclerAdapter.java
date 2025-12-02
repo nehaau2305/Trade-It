@@ -79,7 +79,6 @@ public class TransactionRecyclerAdapter
             holder.price.setText("Price: $" + String.format("%.2f", p));
         }
 
-        // --- category display: prefer snapshot categoryTitle ---
         String storedTitle = item.getCategoryTitle();
         String catId = item.getCategoryId();
 
@@ -187,7 +186,7 @@ public class TransactionRecyclerAdapter
                 break;
 
             case "completed":
-                // show other party’s name
+
                 if (currentUId.equals(item.getBuyerId())) {
                     usersDbRef.child(item.getSellerId()).child("name")
                             .get()
@@ -208,7 +207,6 @@ public class TransactionRecyclerAdapter
                 break;
         }
 
-        // --- open details (card tap + optional details button) ---
         holder.itemView.setOnClickListener(v -> {
             android.content.Context ctx = holder.itemView.getContext();
             android.content.Intent intent =

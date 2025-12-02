@@ -1,6 +1,5 @@
 package edu.uga.cs.tradeit;
 
-import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
@@ -32,9 +31,7 @@ import com.google.firebase.database.ValueEventListener;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class HomeFragment extends Fragment {
 
@@ -43,6 +40,7 @@ public class HomeFragment extends Fragment {
     private ItemRecyclerAdapter adapter;
     private FloatingActionButton addItemButton;
     private Button logoutButton;
+
     private Button myItemsButton;
     private Button transactionsButton;
 
@@ -56,14 +54,13 @@ public class HomeFragment extends Fragment {
     private RadioButton sortByNameRadio;
 
     // ---------- Data: items ----------
-    private final List<Item> allItems = new ArrayList<>();
-    private final List<Item> itemsList = new ArrayList<>();
+    private List<Item> allItems = new ArrayList<>();
+    private List<Item> itemsList = new ArrayList<>();
 
     // ---------- Data: categories ----------
-    private final List<Category> categoryList = new ArrayList<>();
-    private final List<String> categoryTitles = new ArrayList<>();
-    // map categoryId -> title for lookup while filtering
-    private final Map<String, String> categoryIdToTitle = new HashMap<>();
+    private List<Category> categoryList = new ArrayList<>();
+    private List<String> categoryTitles = new ArrayList<>();
+    private String selectedCategoryKey = null;
 
     private static final int MODE_CATEGORY = 0;
     private static final int MODE_ITEM = 1;
@@ -82,7 +79,7 @@ public class HomeFragment extends Fragment {
 
         View view = inflater.inflate(R.layout.fragment_home, container, false);
 
-        // hook up views
+        // --- hook up views ---
         recyclerView          = view.findViewById(R.id.recyclerView);
         addItemButton         = view.findViewById(R.id.floatingActionButton);
         logoutButton          = view.findViewById(R.id.logoutButton);
@@ -96,7 +93,7 @@ public class HomeFragment extends Fragment {
         sortByNewestRadio     = view.findViewById(R.id.sortByNewestRadio);
         sortByNameRadio       = view.findViewById(R.id.sortByNameRadio);
 
-        // RecyclerView: 1 column portrait, 2 columns landscape
+        // RecyclerView layout (1 column portrait, 2 landscape)
         int orientation = getResources().getConfiguration().orientation;
         int spanCount = (orientation == Configuration.ORIENTATION_PORTRAIT) ? 1 : 2;
         recyclerView.setLayoutManager(new GridLayoutManager(requireContext(), spanCount));
@@ -139,49 +136,75 @@ public class HomeFragment extends Fragment {
                     .commit();
         });
 
-        // search mode toggle
+        // ---------- search toggle: category vs item ----------
         searchModeGroup.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.searchByCategoryRadio) {
                 currentSearchMode = MODE_CATEGORY;
                 searchInputEditText.setText("");
                 searchInputEditText.setHint("Search category");
+                selectedCategoryKey = null;
                 setCategorySuggestionsAdapter();
             } else if (checkedId == R.id.searchByItemRadio) {
                 currentSearchMode = MODE_ITEM;
+                selectedCategoryKey = null;
                 searchInputEditText.setText("");
                 searchInputEditText.setHint("Search item name");
                 searchInputEditText.setAdapter(null);
             }
-            applyFilters();
+            applyFiltersAndSort();
         });
 
-        // live search (both modes)
+        // show dropdown when in category mode
+        searchInputEditText.setOnClickListener(v -> {
+            if (currentSearchMode == MODE_CATEGORY) {
+                searchInputEditText.showDropDown();
+            }
+        });
+        searchInputEditText.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus && currentSearchMode == MODE_CATEGORY) {
+                searchInputEditText.showDropDown();
+            }
+        });
+
+        // text change for item-name search
         searchInputEditText.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
             @Override public void afterTextChanged(Editable s) {
-                applyFilters();
+                if (currentSearchMode == MODE_ITEM) {
+                    applyFiltersAndSort();
+                }
             }
         });
 
-        // optional: when user taps a suggestion, we just re-apply filter
-        searchInputEditText.setOnItemClickListener((parent, v, position, id) -> applyFilters());
+        // category picked from dropdown
+        searchInputEditText.setOnItemClickListener((parent, v, position, id) -> {
+            if (currentSearchMode == MODE_CATEGORY) {
+                if (position >= 0 && position < categoryList.size()) {
+                    Category selected = categoryList.get(position);
+                    selectedCategoryKey = selected.getKey();
+                } else {
+                    selectedCategoryKey = null;
+                }
+                applyFiltersAndSort();
+            }
+        });
 
-        // sort mode toggle
+        // ---------- sort toggle ----------
         sortModeGroup.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == R.id.sortByNameRadio) {
-                currentSortMode = SORT_NAME;
-            } else {
+            if (checkedId == R.id.sortByNewestRadio) {
                 currentSortMode = SORT_NEWEST;
+            } else if (checkedId == R.id.sortByNameRadio) {
+                currentSortMode = SORT_NAME;
             }
-            applyFilters();
+            applyFiltersAndSort();
         });
 
-        // defaults
-        searchByCategoryRadio.setChecked(true);
-        sortByNewestRadio.setChecked(true);
-        setCategorySuggestionsAdapter();
+        // default state
+        currentSearchMode = MODE_CATEGORY;
         searchInputEditText.setHint("Search category");
+        setCategorySuggestionsAdapter();
+        sortByNewestRadio.setChecked(true);
 
         return view;
     }
@@ -193,8 +216,6 @@ public class HomeFragment extends Fragment {
                 .addValueEventListener(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
-                        if (!isAdded()) return;
-
                         allItems.clear();
 
                         for (DataSnapshot itemSnapshot : snapshot.getChildren()) {
@@ -207,15 +228,13 @@ public class HomeFragment extends Fragment {
                             }
                         }
 
-                        applyFilters();
+                        applyFiltersAndSort();
                     }
 
                     @Override
                     public void onCancelled(@NonNull DatabaseError error) {
                         if (!isAdded()) return;
-                        Context ctx = getContext();
-                        if (ctx == null) return;
-                        Toast.makeText(ctx,
+                        Toast.makeText(requireContext(),
                                 "Failed to load items",
                                 Toast.LENGTH_SHORT).show();
                     }
@@ -229,11 +248,8 @@ public class HomeFragment extends Fragment {
                 .addValueEventListener(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
-                        if (!isAdded()) return;
-
                         categoryList.clear();
                         categoryTitles.clear();
-                        categoryIdToTitle.clear();
 
                         for (DataSnapshot catSnapshot : snapshot.getChildren()) {
                             Category category = catSnapshot.getValue(Category.class);
@@ -243,24 +259,20 @@ public class HomeFragment extends Fragment {
                                 }
                                 categoryList.add(category);
                                 categoryTitles.add(category.getTitle());
-                                categoryIdToTitle.put(category.getKey(), category.getTitle());
                             }
                         }
+
+                        if (!isAdded()) return;
 
                         if (currentSearchMode == MODE_CATEGORY) {
                             setCategorySuggestionsAdapter();
                         }
-
-                        // re-apply filters now that we know titles
-                        applyFilters();
                     }
 
                     @Override
                     public void onCancelled(@NonNull DatabaseError error) {
                         if (!isAdded()) return;
-                        Context ctx = getContext();
-                        if (ctx == null) return;
-                        Toast.makeText(ctx,
+                        Toast.makeText(requireContext(),
                                 "Failed to load categories",
                                 Toast.LENGTH_SHORT).show();
                     }
@@ -269,36 +281,30 @@ public class HomeFragment extends Fragment {
 
     private void setCategorySuggestionsAdapter() {
         if (!isAdded()) return;
-        Context ctx = getContext();
-        if (ctx == null) return;
 
         ArrayAdapter<String> dropdownAdapter = new ArrayAdapter<>(
-                ctx,
+                requireContext(),
                 android.R.layout.simple_dropdown_item_1line,
                 categoryTitles
         );
         searchInputEditText.setAdapter(dropdownAdapter);
     }
 
-    private void applyFilters() {
+    private void applyFiltersAndSort() {
         itemsList.clear();
 
-        String query = searchInputEditText.getText().toString().trim().toLowerCase();
-
+        // --- filter ---
         if (currentSearchMode == MODE_CATEGORY) {
-            // filter by CATEGORY TITLE (partial match)
             for (Item item : allItems) {
-                String catId = item.getCategoryId();
-                String title = (catId == null) ? "" : categoryIdToTitle.get(catId);
-                if (title == null) title = "";
-                String t = title.toLowerCase();
-
-                if (query.isEmpty() || t.contains(query)) {
+                if (selectedCategoryKey == null || selectedCategoryKey.isEmpty()) {
+                    itemsList.add(item);
+                } else if (selectedCategoryKey.equals(item.getCategoryId())) {
                     itemsList.add(item);
                 }
             }
         } else {
-            // filter by ITEM NAME (partial match)
+            String query = searchInputEditText.getText().toString().trim().toLowerCase();
+
             for (Item item : allItems) {
                 if (query.isEmpty()) {
                     itemsList.add(item);
@@ -311,8 +317,11 @@ public class HomeFragment extends Fragment {
             }
         }
 
-        // ---- sort ----
-        if (currentSortMode == SORT_NAME) {
+        // --- sort ---
+        if (currentSortMode == SORT_NEWEST) {
+            Collections.sort(itemsList, (a, b) ->
+                    Long.compare(b.getCreationTime(), a.getCreationTime())); // newest first
+        } else if (currentSortMode == SORT_NAME) {
             Collections.sort(itemsList, new Comparator<Item>() {
                 @Override
                 public int compare(Item a, Item b) {
@@ -321,17 +330,8 @@ public class HomeFragment extends Fragment {
                     return na.compareTo(nb);
                 }
             });
-        } else {
-            // newest first
-            Collections.sort(itemsList, new Comparator<Item>() {
-                @Override
-                public int compare(Item a, Item b) {
-                    return Long.compare(b.getCreationTime(), a.getCreationTime());
-                }
-            });
         }
 
         adapter.notifyDataSetChanged();
     }
 }
-
