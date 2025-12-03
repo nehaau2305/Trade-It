@@ -14,14 +14,30 @@ import androidx.fragment.app.Fragment;
 
 import com.google.firebase.auth.FirebaseAuth;
 
+/**
+ * LoginFragments prompts the user to enter their email & password to begin
+ * using the application.
+ */
 public class LoginFragment extends Fragment {
-
+    // initialize variables
     private EditText emailInput, passwInput;
     private Button loginB, registerB;
     private FirebaseAuth auth;
-
+    // constructor
     public LoginFragment() { }
 
+    /**
+     * onCreateView binds the UI elements & sets up the button click listeners.
+     * @param inflater The LayoutInflater object that can be used to inflate
+     * any views in the fragment,
+     * @param container If non-null, this is the parent view that the fragment's
+     * UI should be attached to.  The fragment should not add the view itself,
+     * but this can be used to generate the LayoutParams of the view.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed
+     * from a previous saved state as given here.
+     *
+     * @return
+     */
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -45,7 +61,12 @@ public class LoginFragment extends Fragment {
         return view;
     }
 
-    // Handle login logic
+    /**
+     * loginUser checks if the user entered a value for the email field, if the
+     * entered email value is in a valid format, & if the user entered a password value.
+     * The method calls the database to check is the account exists. If the user
+     * successfully logs in, the user is navigated to the Home Fragment.
+     */
     private void loginUser() {
         String email    = emailInput.getText().toString().trim();
         String password = passwInput.getText().toString().trim();
@@ -103,7 +124,10 @@ public class LoginFragment extends Fragment {
                 });
     }
 
-    // Switch to registration fragment
+    /**
+     * switchToRegister allows the user to navigate to the Register Fragment
+     * if they decide to create an account instead of logging in.
+     */
     private void switchToRegister() {
         requireActivity().getSupportFragmentManager().beginTransaction()
                 .replace(R.id.fragmentContainerView, new RegisterFragment())
