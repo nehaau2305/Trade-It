@@ -33,8 +33,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * AddItemDialogFragment allows the user to create & post a new item to be shared with all
+ * users. Users are shown this dialog fragment after clicking the plus button at the
+ * bottom right corner of the screen. New categories are also created within this fragment.
+ */
 public class AddItemDialogFragment extends DialogFragment {
 
+    // initialize variables
     private AutoCompleteTextView itemCategoryDropdown;
     private EditText itemNameEditText;
     private EditText priceEditText;
@@ -49,6 +55,13 @@ public class AddItemDialogFragment extends DialogFragment {
     private final Set<String> categoryTitleLowerSet = new HashSet<>();
     private String selectedCategoryKey = null;
 
+    /**
+     * onCreateDialog initializes the UI of the dialog fragment.
+     * @param savedInstanceState The last saved instance state of the Fragment,
+     * or null if this is a freshly created Fragment.
+     *
+     * @return
+     */
     @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
@@ -56,6 +69,7 @@ public class AddItemDialogFragment extends DialogFragment {
         LayoutInflater inflater = requireActivity().getLayoutInflater();
         View view = inflater.inflate(R.layout.dialog_add_item, null);
 
+        // connect to XML elements
         itemCategoryDropdown = view.findViewById(R.id.itemCategoryDropdown);
         itemNameEditText     = view.findViewById(R.id.itemNameEditText);
         priceEditText        = view.findViewById(R.id.priceEditText);
@@ -88,6 +102,7 @@ public class AddItemDialogFragment extends DialogFragment {
             }
         });
 
+        // only allow the user to enter up to 2 decimal places for the price
         priceEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void afterTextChanged(Editable s) {
@@ -117,6 +132,7 @@ public class AddItemDialogFragment extends DialogFragment {
         cancelButton.setOnClickListener(v -> dialog.dismiss());
 
         String itemId = (getArguments() != null) ? getArguments().getString("itemId") : null;
+        // conditional rendering of dialog fragment if the user is creating or editing the item
         if (itemId != null) {
             DatabaseReference dbRef = FirebaseDatabase.getInstance()
                     .getReference("items")
@@ -155,8 +171,12 @@ public class AddItemDialogFragment extends DialogFragment {
         }
 
         return dialog;
-    }
+    } // onCreateDialog
 
+    /**
+     * loadCategories displays the names of all categories in the
+     * database.
+     */
     private void loadCategories() {
         DatabaseReference catRef = FirebaseDatabase.getInstance()
                 .getReference("categories");
@@ -209,6 +229,12 @@ public class AddItemDialogFragment extends DialogFragment {
                 });
     }
 
+    /**
+     * showCreateCategoryDialog displays the dialog for the user to
+     * name the category they want to create. This method checks if
+     * the entered category already exists & if the category text is empty.
+     * If that is the case, the user is prevented from creating the category.
+     */
     private void showCreateCategoryDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
         builder.setTitle("New Category");
@@ -242,6 +268,12 @@ public class AddItemDialogFragment extends DialogFragment {
         builder.show();
     }
 
+    /**
+     * createCategoryInFirebase adds the entered category into the Firebase
+     * database.
+     * @param title
+     * @param normalizedLower
+     */
     private void createCategoryInFirebase(String title, String normalizedLower) {
         String currentUid = FirebaseAuth.getInstance().getUid();
         if (currentUid == null) {
@@ -293,6 +325,11 @@ public class AddItemDialogFragment extends DialogFragment {
                 });
     }
 
+    /**
+     * addNewItem adds the entered item into the Firebase database.
+     * This method checks that all fields are filled with a value.
+     * @param dialog
+     */
     private void addNewItem(Dialog dialog) {
         String name  = itemNameEditText.getText().toString().trim();
         String priceString = priceEditText.getText().toString().trim();
@@ -367,6 +404,14 @@ public class AddItemDialogFragment extends DialogFragment {
         }
     }
 
+    /**
+     * editItem allows the user to change values of an item the current
+     * user has created. They can edit the category, name, price, & description.
+     * This method updates the exisitng item in the database instead of creating
+     * a new item.
+     * @param itemId
+     * @param dialog
+     */
     private void editItem(String itemId, Dialog dialog) {
         String name = itemNameEditText.getText().toString().trim();
         String desc = descriptionEditText.getText().toString().trim();

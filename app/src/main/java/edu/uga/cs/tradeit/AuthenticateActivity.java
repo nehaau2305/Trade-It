@@ -7,8 +7,21 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
+/**
+ * AuthenticateActivity hosts 2 fragments: the login & sign up fragment.
+ * Depending on what the user decides to navigate to on the Main Activity,
+ * this activity will host the appropriate fragment.
+ */
 public class AuthenticateActivity extends AppCompatActivity {
 
+    /**
+     * onCreate determines which fragment to navigate to based on the
+     * fragmentType specified from the MainActivity
+     * @param savedInstanceState If the activity is being re-initialized after
+     *     previously being shut down then this Bundle contains the data it most
+     *     recently supplied in {@link #onSaveInstanceState}.  <b><i>Note: Otherwise it is null.</i></b>
+     *
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

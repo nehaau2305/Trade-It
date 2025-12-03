@@ -11,12 +11,23 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+/**
+ * MainActivity is the initial view that is displayed that
+ * prompts the user to create an account or login.
+ */
 public class MainActivity extends AppCompatActivity {
 
     // variables
     Button loginB;
     Button signUpB;
 
+    /**
+     * onCreate connects the UI elements & sets up the button listeners.
+     * @param savedInstanceState If the activity is being re-initialized after
+     *     previously being shut down then this Bundle contains the data it most
+     *     recently supplied in {@link #onSaveInstanceState}.  <b><i>Note: Otherwise it is null.</i></b>
+     *
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -28,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
-
+        // connect buttons to the actual layout components
         loginB = findViewById(R.id.loginButton);
         signUpB = findViewById(R.id.signUpButton);
 
