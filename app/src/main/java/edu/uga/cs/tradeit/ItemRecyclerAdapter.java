@@ -18,8 +18,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * ItemRecyclerAdapter is used to display the list of all items in the
+ * HomeFragment. The adapter reuses row views as the user scrolls to
+ * improve performance.
+ */
 public class ItemRecyclerAdapter extends RecyclerView.Adapter<ItemRecyclerAdapter.ItemHolder> {
 
+    // initialize variables
     private List<Item> itemsList;
 
     private DatabaseReference usersRef =
@@ -35,6 +41,10 @@ public class ItemRecyclerAdapter extends RecyclerView.Adapter<ItemRecyclerAdapte
         this.itemsList = itemsList;
     }
 
+    /**
+     * ItemHolder represents a single item box within the RecyclerView &
+     * initializes all the UI elements within it.
+     */
     class ItemHolder extends RecyclerView.ViewHolder {
         TextView name, person, category, price;
         Button actionButton, detailsButton;
@@ -50,6 +60,13 @@ public class ItemRecyclerAdapter extends RecyclerView.Adapter<ItemRecyclerAdapte
         }
     }
 
+    /**
+     * onCreateViewHolder inflates the layout.
+     * @param parent   The ViewGroup into which the new View will be added after it is bound to
+     *                 an adapter position.
+     * @param viewType The view type of the new View.
+     * @return
+     */
     @NonNull
     @Override
     public ItemHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -58,6 +75,11 @@ public class ItemRecyclerAdapter extends RecyclerView.Adapter<ItemRecyclerAdapte
         return new ItemHolder(view);
     }
 
+    /**
+     * onBindViewHolder updates the ViewHolder's UI with the updated item list.
+     * @param holder
+     * @param position
+     */
     @Override
     public void onBindViewHolder(@NonNull ItemHolder holder, int position) {
         Item item = itemsList.get(position);
@@ -95,6 +117,7 @@ public class ItemRecyclerAdapter extends RecyclerView.Adapter<ItemRecyclerAdapte
                             holder.category.setText("Category: Unknown"));
         }
 
+        // initialize click listener
         holder.detailsButton.setVisibility(View.VISIBLE);
         holder.detailsButton.setOnClickListener(v -> {
             android.content.Context ctx = holder.itemView.getContext();
@@ -107,6 +130,8 @@ public class ItemRecyclerAdapter extends RecyclerView.Adapter<ItemRecyclerAdapte
         holder.itemView.setOnClickListener(v -> holder.detailsButton.performClick());
 
         String currentUid = FirebaseAuth.getInstance().getUid();
+        // if the current user is the seller, display "Your Item" & disable the button
+        // else allow the user to request to purchase the item
         if (currentUid != null && currentUid.equals(item.getSellerId())) {
             holder.actionButton.setVisibility(View.VISIBLE);
             holder.actionButton.setEnabled(false);
@@ -141,6 +166,10 @@ public class ItemRecyclerAdapter extends RecyclerView.Adapter<ItemRecyclerAdapte
         }
     }
 
+    /**
+     * getItemCount returns the total number of items in the itemsList
+     * @return
+     */
     @Override
     public int getItemCount() {
         return (itemsList == null) ? 0 : itemsList.size();

@@ -6,7 +6,7 @@ package edu.uga.cs.tradeit;
  * is not listed here.
  */
 public class User {
-    // initialize variables
+    // initialize attributes
     private String name;
     private String email;   // NEW
     // default empty constructor

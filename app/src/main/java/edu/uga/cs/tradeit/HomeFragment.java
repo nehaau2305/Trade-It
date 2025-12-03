@@ -34,8 +34,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
+/**
+ * HomeFragment is the first view the user sees after logging in. It displays
+ * all items still available for purchase & the search function.
+ */
 public class HomeFragment extends Fragment {
 
+    // initialize all UI variables
     private RecyclerView recyclerView;
     private ItemRecyclerAdapter adapter;
     private FloatingActionButton addItemButton;
@@ -69,8 +74,22 @@ public class HomeFragment extends Fragment {
     private static final int SORT_NAME = 1;
     private int currentSortMode = SORT_NEWEST;
 
+    // empty constructor
     public HomeFragment() { }
 
+    /**
+     * onCreateView connects all the UI elements & sets up all the click
+     * listeners.
+     * @param inflater The LayoutInflater object that can be used to inflate
+     * any views in the fragment,
+     * @param container If non-null, this is the parent view that the fragment's
+     * UI should be attached to.  The fragment should not add the view itself,
+     * but this can be used to generate the LayoutParams of the view.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed
+     * from a previous saved state as given here.
+     *
+     * @return
+     */
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container,
@@ -191,6 +210,11 @@ public class HomeFragment extends Fragment {
         return view;
     }
 
+    /**
+     * loadAvailableItems loads all the items from the Firebase that has
+     * the status "available" so that only the items that no one has
+     * already requested or purchased is displayed.
+     */
     private void loadAvailableItems() {
         DatabaseReference db = FirebaseDatabase.getInstance().getReference("items");
 
@@ -225,6 +249,10 @@ public class HomeFragment extends Fragment {
                 });
     }
 
+    /**
+     * loadCategories loads all categories from the Firebase database & updates the
+     * local category lists.
+     */
     private void loadCategories() {
         DatabaseReference catRef = FirebaseDatabase.getInstance().getReference("categories");
 
@@ -271,6 +299,10 @@ public class HomeFragment extends Fragment {
                 });
     }
 
+    /**
+     * setCategorySuggestionsAdapter displays all current category titles
+     * in the database to the user.
+     */
     private void setCategorySuggestionsAdapter() {
         if (!isAdded()) return;
 
@@ -282,6 +314,11 @@ public class HomeFragment extends Fragment {
         searchInputEditText.setAdapter(dropdownAdapter);
     }
 
+    /**
+     * applyFilters filters the items shown depending on what category
+     * or item the user queries. After filtering, this method also applies
+     * the current sorting mode, either by creation time or alphabetically.
+     */
     private void applyFilters() {
         itemsList.clear();
 
@@ -319,5 +356,5 @@ public class HomeFragment extends Fragment {
         }
 
         adapter.notifyDataSetChanged();
-    }
+    } // applyFilters
 }

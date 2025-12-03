@@ -1,7 +1,10 @@
 package edu.uga.cs.tradeit;
 
+/**
+ * Item initializes the item table in the database.
+ */
 public class Item {
-
+    // initialize attributes
     private String key;
     private String sellerId;
     private String name;
@@ -17,6 +20,7 @@ public class Item {
     // NEW: snapshot of the category title (for history / completed transactions)
     private String categoryTitle;
 
+    // default empty constructor
     public Item() {
         this.key = null;
         this.sellerId = null;
@@ -32,6 +36,7 @@ public class Item {
         this.categoryTitle = null;
     }
 
+    // constructor
     public Item(String sellerId,
                 String name,
                 String categoryId,
@@ -54,6 +59,7 @@ public class Item {
         this.categoryTitle = null; // set separately
     }
 
+    // getter & setter methods
     public String getKey() { return key; }
     public void setKey(String key) { this.key = key; }
 
