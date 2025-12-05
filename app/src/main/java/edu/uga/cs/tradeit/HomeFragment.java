@@ -80,15 +80,6 @@ public class HomeFragment extends Fragment {
     /**
      * onCreateView connects all the UI elements & sets up all the click
      * listeners.
-     * @param inflater The LayoutInflater object that can be used to inflate
-     * any views in the fragment,
-     * @param container If non-null, this is the parent view that the fragment's
-     * UI should be attached to.  The fragment should not add the view itself,
-     * but this can be used to generate the LayoutParams of the view.
-     * @param savedInstanceState If non-null, this fragment is being re-constructed
-     * from a previous saved state as given here.
-     *
-     * @return
      */
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -169,7 +160,14 @@ public class HomeFragment extends Fragment {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
             @Override public void afterTextChanged(Editable s) {
-                if (currentSearchMode == MODE_ITEM) {
+                // if search bar is cleared in category mode, reset category filter
+                if (currentSearchMode == MODE_CATEGORY) {
+                    if (s == null || s.toString().trim().isEmpty()) {
+                        selectedCategoryKey = null;
+                    }
+                }
+
+                if (currentSearchMode == MODE_ITEM || currentSearchMode == MODE_CATEGORY) {
                     applyFilters();
                 }
             }
@@ -177,12 +175,18 @@ public class HomeFragment extends Fragment {
 
         searchInputEditText.setOnItemClickListener((parent, v, position, id) -> {
             if (currentSearchMode == MODE_CATEGORY) {
-                if (position >= 0 && position < categoryList.size()) {
-                    Category selected = categoryList.get(position);
-                    selectedCategoryKey = selected.getKey();
-                } else {
-                    selectedCategoryKey = null;
+                String chosenTitle = (String) parent.getItemAtPosition(position);
+                selectedCategoryKey = null;
+
+                // find the Category whose title matches this chosen title
+                for (Category c : categoryList) {
+                    String t = c.getTitle();
+                    if (t != null && t.equals(chosenTitle)) {
+                        selectedCategoryKey = c.getKey();
+                        break;
+                    }
                 }
+
                 applyFilters();
             }
         });
@@ -323,13 +327,44 @@ public class HomeFragment extends Fragment {
         itemsList.clear();
 
         if (currentSearchMode == MODE_CATEGORY) {
-            for (Item item : allItems) {
-                if (selectedCategoryKey == null || selectedCategoryKey.isEmpty()) {
-                    itemsList.add(item);
-                } else if (selectedCategoryKey.equals(item.getCategoryId())) {
-                    itemsList.add(item);
+
+            String query = searchInputEditText.getText().toString()
+                    .trim().toLowerCase(Locale.US);
+
+            Set<String> allowedCategoryIds = new HashSet<>();
+
+            // category chosen from dropdown
+            if (selectedCategoryKey != null && !selectedCategoryKey.isEmpty()) {
+                allowedCategoryIds.add(selectedCategoryKey);
+            }
+
+            // any categories whose title matches the typed query
+            if (!query.isEmpty()) {
+                for (Category c : categoryList) {
+                    String title = c.getTitle();
+                    if (title == null) continue;
+                    String norm = title.toLowerCase(Locale.US);
+                    if (norm.contains(query)) {
+                        if (c.getKey() != null) {
+                            allowedCategoryIds.add(c.getKey());
+                        }
+                    }
                 }
             }
+
+            for (Item item : allItems) {
+                String itemCatId = item.getCategoryId();
+
+                if (allowedCategoryIds.isEmpty()) {
+                    // no category filter: show all available items
+                    itemsList.add(item);
+                } else {
+                    if (itemCatId != null && allowedCategoryIds.contains(itemCatId)) {
+                        itemsList.add(item);
+                    }
+                }
+            }
+
         } else {
             String query = searchInputEditText.getText().toString().trim().toLowerCase(Locale.US);
             for (Item item : allItems) {

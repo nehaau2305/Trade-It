@@ -31,10 +31,25 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * A dialog window used to edit an existing item.
+ *
+ * It loads the item from Firebase, shows its info in a form,
+ * lets the user change things, and then saves the changes
+ * back to Firebase when the user taps "Save".
+ */
 public class EditItemDialogFragment extends DialogFragment {
 
+    // key name used to pass the item key into this dialog
     private static final String ARG_ITEM_KEY = "itemKey";
 
+    /**
+     * Helper function to create a new EditItemDialogFragment
+     * with the item key stored in its arguments.
+     *
+     * @param itemKey the Firebase key of the item we want to edit
+     * @return a new EditItemDialogFragment ready to use
+     */
     public static EditItemDialogFragment newInstance(String itemKey) {
         EditItemDialogFragment f = new EditItemDialogFragment();
         Bundle b = new Bundle();
@@ -43,23 +58,33 @@ public class EditItemDialogFragment extends DialogFragment {
         return f;
     }
 
+    // the key of the item we are editing
     private String itemKey;
+    // the actual Item object loaded from Firebase
     private Item currentItem;
 
+    // UI fields in the dialog
     private EditText nameEditText, priceEditText, descriptionEditText;
     private AutoCompleteTextView categoryDropdown;
     private CheckBox freeCheckBox;
     private Button addButton, cancelButton, addCategoryButton;
 
+    // Firebase references for items and categories
     private DatabaseReference itemsRef;
     private DatabaseReference categoriesRef;
     private String currentUid;
 
+    // lists and sets for managing categories and their titles
     private final List<Category> categoryList = new ArrayList<>();
     private final List<String> categoryTitles = new ArrayList<>();
     private final Set<String> categoryTitlesLowerSet = new HashSet<>();
+    // which category is currently selected (by id)
     private String selectedCategoryId = null;
 
+    /**
+     * Called to build and return the dialog box UI.
+     * Here we set up all the views, listeners, and load data.
+     */
     @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
@@ -73,6 +98,7 @@ public class EditItemDialogFragment extends DialogFragment {
         LayoutInflater inflater = requireActivity().getLayoutInflater();
         View view = inflater.inflate(R.layout.dialog_add_item, null);
 
+        // find all the views in the layout
         nameEditText       = view.findViewById(R.id.itemNameEditText);
         priceEditText      = view.findViewById(R.id.priceEditText);
         descriptionEditText= view.findViewById(R.id.descriptionEditText);
@@ -82,12 +108,14 @@ public class EditItemDialogFragment extends DialogFragment {
         cancelButton       = view.findViewById(R.id.cancelButton);
         addCategoryButton  = view.findViewById(R.id.addCategoryButton);
 
+        // change title and button text so it says "Edit" instead of "Add"
         TextView titleText = view.findViewById(R.id.addItemTitleText);
         if (titleText != null) {
             titleText.setText("Edit Item");
         }
         addButton.setText("Save Changes");
 
+        // when item is free, price becomes 0 and user can't type in price
         freeCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {
                 priceEditText.setText("0");
@@ -97,11 +125,13 @@ public class EditItemDialogFragment extends DialogFragment {
             }
         });
 
+        // cancel just closes the dialog
         cancelButton.setOnClickListener(v -> dismiss());
 
+        // opens a small dialog to create a new category
         addCategoryButton.setOnClickListener(v -> showNewCategoryDialog());
 
-        // Show dropdown on click / focus
+        // set up dropdown so it always shows suggestions when clicked/focused
         categoryDropdown.setThreshold(0);
         categoryDropdown.setOnClickListener(v -> categoryDropdown.showDropDown());
         categoryDropdown.setOnFocusChangeListener((v, hasFocus) -> {
@@ -113,14 +143,21 @@ public class EditItemDialogFragment extends DialogFragment {
         builder.setView(view);
         Dialog dialog = builder.create();
 
+        // load the item being edited, and all categories for the dropdown
         loadItem();
         loadCategories();
 
+        // when user taps "Save Changes", we try to save everything
         addButton.setOnClickListener(v -> saveChanges(dialog));
 
         return dialog;
     }
 
+    /**
+     * Shows a dialog to create a brand new category.
+     * If the category name is valid and not a duplicate,
+     * it saves it into Firebase and updates the dropdown list.
+     */
     private void showNewCategoryDialog() {
         AlertDialog.Builder b = new AlertDialog.Builder(requireContext());
         b.setTitle("New Category");
@@ -164,6 +201,7 @@ public class EditItemDialogFragment extends DialogFragment {
                     .addOnSuccessListener(aVoid -> {
                         if (!isAdded()) return;
 
+                        // update our local lists and dropdown
                         categoryList.add(newCat);
                         categoryTitles.add(title);
                         categoryTitlesLowerSet.add(norm);
@@ -191,6 +229,10 @@ public class EditItemDialogFragment extends DialogFragment {
         b.show();
     }
 
+    /**
+     * Loads the item from Firebase using the itemKey.
+     * Once loaded, it fills in the UI fields with the item's data.
+     */
     private void loadItem() {
         if (itemKey == null) return;
 
@@ -210,6 +252,7 @@ public class EditItemDialogFragment extends DialogFragment {
                     item.setKey(itemKey);
                     currentItem = item;
 
+                    // fill in text fields with current values
                     nameEditText.setText(item.getName());
                     descriptionEditText.setText(item.getDescription());
 
@@ -224,6 +267,7 @@ public class EditItemDialogFragment extends DialogFragment {
                         priceEditText.setText(String.format(Locale.US, "%.2f", p));
                     }
 
+                    // remember its category so we can show it in the dropdown
                     selectedCategoryId = item.getCategoryId();
                     applySelectedCategoryToDropdown();
                 })
@@ -236,6 +280,10 @@ public class EditItemDialogFragment extends DialogFragment {
                 });
     }
 
+    /**
+     * Loads all categories from Firebase, builds the dropdown list,
+     * and connects the selected category to the item (if editing).
+     */
     private void loadCategories() {
         categoriesRef.orderByChild("title")
                 .addValueEventListener(new ValueEventListener() {
@@ -247,6 +295,7 @@ public class EditItemDialogFragment extends DialogFragment {
                         categoryTitles.clear();
                         categoryTitlesLowerSet.clear();
 
+                        // go through each category in the database
                         for (DataSnapshot catSnap : snapshot.getChildren()) {
                             Category c = catSnap.getValue(Category.class);
                             if (c != null) {
@@ -265,6 +314,7 @@ public class EditItemDialogFragment extends DialogFragment {
                             }
                         }
 
+                        // create an adapter for the category dropdown
                         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                                 requireContext(),
                                 android.R.layout.simple_dropdown_item_1line,
@@ -272,12 +322,14 @@ public class EditItemDialogFragment extends DialogFragment {
                         );
                         categoryDropdown.setAdapter(adapter);
 
+                        // when user picks a category, remember its id
                         categoryDropdown.setOnItemClickListener((parent, view, position, id) -> {
                             if (position >= 0 && position < categoryList.size()) {
                                 selectedCategoryId = categoryList.get(position).getKey();
                             }
                         });
 
+                        // if we already had a selectedCategoryId, try to show it now
                         applySelectedCategoryToDropdown();
                     }
 
@@ -291,6 +343,10 @@ public class EditItemDialogFragment extends DialogFragment {
                 });
     }
 
+    /**
+     * After categories are loaded, this tries to set the dropdown text
+     * to match the category whose id is selectedCategoryId.
+     */
     private void applySelectedCategoryToDropdown() {
         if (selectedCategoryId == null || categoryList.isEmpty() || !isAdded()) return;
 
@@ -303,6 +359,11 @@ public class EditItemDialogFragment extends DialogFragment {
         }
     }
 
+    /**
+     * Reads all data from the form fields, checks that it's valid,
+     * and then updates the item in Firebase. If successful, it also
+     * refreshes the item detail screen and closes the dialog.
+     */
     private void saveChanges(Dialog dialog) {
         if (currentItem == null) return;
 
@@ -310,6 +371,7 @@ public class EditItemDialogFragment extends DialogFragment {
         String priceStr = priceEditText.getText().toString().trim();
         String desc     = descriptionEditText.getText().toString().trim();
 
+        // basic checks to make sure required fields are not empty
         if (name.isEmpty()) {
             nameEditText.setError("Name required");
             return;
@@ -343,6 +405,7 @@ public class EditItemDialogFragment extends DialogFragment {
             return;
         }
 
+        // only allow editing when item status is "available"
         if (!"available".equals(currentItem.getStatus())) {
             Toast.makeText(getContext(),
                     "Only available items can be edited",
@@ -351,6 +414,7 @@ public class EditItemDialogFragment extends DialogFragment {
             return;
         }
 
+        // build a map with all updates we want to send to Firebase
         Map<String, Object> updates = new HashMap<>();
         updates.put("name", name);
         updates.put("price", priceVal);
@@ -366,6 +430,7 @@ public class EditItemDialogFragment extends DialogFragment {
                             "Item updated",
                             Toast.LENGTH_SHORT).show();
 
+                    // if we are on the ItemDetailActivity, refresh it
                     if (getActivity() instanceof ItemDetailActivity) {
                         ((ItemDetailActivity) getActivity()).reloadItem();
                     }
@@ -380,3 +445,6 @@ public class EditItemDialogFragment extends DialogFragment {
                 });
     }
 }
+
+
+

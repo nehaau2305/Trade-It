@@ -18,17 +18,45 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * RecyclerView adapter for the Transactions screen.
+ *
+ * It shows the user's transactions in three "modes":
+ * - pending: items where the user is the buyer and the sale is not finished
+ * - confirm: items where the user is the seller and needs to confirm the sale
+ * - completed: finished transactions where the user was buyer or seller
+ *
+ * The UI behavior changes slightly based on which tab is active.
+ */
 public class TransactionRecyclerAdapter
         extends RecyclerView.Adapter<TransactionRecyclerAdapter.TransactionHolder> {
 
+    /** List of items (transactions) to display. */
     private List<Item> itemsList;
+
+    /** Which tab is currently active: "pending", "confirm", or "completed". */
     private String currentTab = "pending";
+
+    /** ID of the currently logged-in user. */
     private String currentUId = FirebaseAuth.getInstance().getUid();
 
+    /** Firebase reference to the categories node, used to look up category titles. */
     private DatabaseReference categoriesRef =
             FirebaseDatabase.getInstance().getReference("categories");
+
+    /**
+     * Cache from categoryId -> category title, so we do not fetch the same
+     * category over and over from Firebase.
+     */
     private Map<String, String> categoryCache = new HashMap<>();
 
+    /**
+     * Creates a new adapter.
+     *
+     * @param itemsList list of Item objects that represent transactions
+     * @param currentUId ID of the current user
+     * @param tab which tab is active at the moment: "pending", "confirm", or "completed"
+     */
     public TransactionRecyclerAdapter(List<Item> itemsList,
                                       String currentUId,
                                       String tab) {
@@ -37,11 +65,21 @@ public class TransactionRecyclerAdapter
         this.currentTab = tab;
     }
 
+    /**
+     * Called when the fragment switches tabs.
+     * We just update the current tab name and tell the RecyclerView to redraw.
+     *
+     * @param tab new tab name ("pending", "confirm", or "completed")
+     */
     public void setCurrentTab(String tab) {
         currentTab = tab;
         notifyDataSetChanged();
     }
 
+    /**
+     * ViewHolder for one transaction row (card).
+     * It holds references to views inside item_card.xml.
+     */
     class TransactionHolder extends RecyclerView.ViewHolder {
         TextView name, person, category, price;
         Button actionButton;
@@ -58,6 +96,9 @@ public class TransactionRecyclerAdapter
         }
     }
 
+    /**
+     * Creates a new row/card view when needed.
+     */
     @NonNull
     @Override
     public TransactionHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -66,12 +107,18 @@ public class TransactionRecyclerAdapter
         return new TransactionHolder(v);
     }
 
+    /**
+     * Fills a row with data from one Item and sets button behavior
+     * based on the current tab (pending, confirm, or completed).
+     */
     @Override
     public void onBindViewHolder(@NonNull TransactionHolder holder, int position) {
         Item item = itemsList.get(position);
 
+        // Item name
         holder.name.setText(item.getName());
 
+        // Price: show "Free" if zero, otherwise format to 2 decimals
         double p = item.getPrice();
         if (p == 0.0) {
             holder.price.setText("Price: Free");
@@ -79,10 +126,13 @@ public class TransactionRecyclerAdapter
             holder.price.setText("Price: $" + String.format("%.2f", p));
         }
 
+        // Category display: prefer stored categoryTitle (saved when completed),
+        // otherwise fall back to live category node (if it still exists).
         String storedTitle = item.getCategoryTitle();
         String catId = item.getCategoryId();
 
         if (storedTitle != null && !storedTitle.isEmpty()) {
+            // Completed items keep this even if category is deleted
             holder.category.setText("Category: " + storedTitle);
         } else if (catId == null || catId.isEmpty()) {
             holder.category.setText("Category: None");
@@ -101,17 +151,19 @@ public class TransactionRecyclerAdapter
                             holder.category.setText("Category: Unknown"));
         }
 
+        // Reference to users node, used to show buyer/seller names
         DatabaseReference usersDbRef =
                 FirebaseDatabase.getInstance().getReference("users");
 
-        // reset action button by default
+        // By default, hide and disable the action button.
         holder.actionButton.setVisibility(View.GONE);
         holder.actionButton.setEnabled(false);
         holder.actionButton.setOnClickListener(null);
 
+        // Behavior depends on which tab we are on.
         switch (currentTab) {
             case "pending":
-                // items where current user is buyer & status = pending
+                // User is the buyer; show the seller's name.
                 usersDbRef.child(item.getSellerId()).child("name")
                         .get()
                         .addOnSuccessListener(snapshot -> {
@@ -119,11 +171,11 @@ public class TransactionRecyclerAdapter
                             if (seller == null) seller = "Unknown";
                             holder.person.setText("Seller: " + seller);
                         });
-                // action handled via detail page
+                // Action is handled via detail screen, so no button here.
                 break;
 
             case "confirm":
-                // seller view – confirm sale
+                // User is the seller; show the buyer's name.
                 usersDbRef.child(item.getBuyerId()).child("name")
                         .get()
                         .addOnSuccessListener(snapshot -> {
@@ -138,12 +190,15 @@ public class TransactionRecyclerAdapter
                 boolean sellerConf = item.isSellerConfirmed();
 
                 if (sellerConf && !buyerConf) {
+                    // Seller already confirmed, waiting on buyer.
                     holder.actionButton.setEnabled(false);
                     holder.actionButton.setText("Waiting for Buyer");
                 } else if (sellerConf && buyerConf) {
+                    // Both sides already confirmed, transaction completed.
                     holder.actionButton.setEnabled(false);
                     holder.actionButton.setText("Completed");
                 } else {
+                    // Seller can confirm the sale here.
                     holder.actionButton.setEnabled(true);
                     holder.actionButton.setText("Confirm Sale");
 
@@ -152,6 +207,7 @@ public class TransactionRecyclerAdapter
                                 FirebaseDatabase.getInstance().getReference("items");
                         DatabaseReference itemRef = itemsDbRef.child(item.getKey());
 
+                        // Mark sellerConfirmed = true in Firebase.
                         itemRef.child("sellerConfirmed").setValue(true)
                                 .addOnSuccessListener(aVoid ->
                                         itemRef.get().addOnSuccessListener(snap -> {
@@ -166,10 +222,33 @@ public class TransactionRecyclerAdapter
                                             item.setBuyerConfirmed(bConf);
                                             item.setSellerConfirmed(sConf);
 
+                                            // If both sides confirmed, mark status completed
+                                            // and store the category title on the Item itself.
                                             if (bConf && sConf) {
-                                                itemRef.child("status").setValue("completed");
+                                                String catTitleToSave = item.getCategoryTitle();
+
+                                                // If we don't already have categoryTitle set,
+                                                // try to pull it from the cache for this categoryId.
+                                                if (catTitleToSave == null || catTitleToSave.isEmpty()) {
+                                                    String catIdInner = item.getCategoryId();
+                                                    if (catIdInner != null &&
+                                                            categoryCache.containsKey(catIdInner)) {
+                                                        catTitleToSave = categoryCache.get(catIdInner);
+                                                    }
+                                                }
+
+                                                Map<String, Object> updates = new HashMap<>();
+                                                updates.put("status", "completed");
+                                                if (catTitleToSave != null && !catTitleToSave.isEmpty()) {
+                                                    // Save the categoryTitle so completed items
+                                                    // remember their category even if the category
+                                                    // is later deleted.
+                                                    updates.put("categoryTitle", catTitleToSave);
+                                                }
+                                                itemRef.updateChildren(updates);
                                             }
 
+                                            // Update button label after confirm.
                                             holder.actionButton.setEnabled(false);
                                             if (bConf && sConf) {
                                                 holder.actionButton.setText("Completed");
@@ -186,8 +265,9 @@ public class TransactionRecyclerAdapter
                 break;
 
             case "completed":
-
+                // Show the *other* party in the transaction.
                 if (currentUId.equals(item.getBuyerId())) {
+                    // You were the buyer -> show seller.
                     usersDbRef.child(item.getSellerId()).child("name")
                             .get()
                             .addOnSuccessListener(snapshot -> {
@@ -196,6 +276,7 @@ public class TransactionRecyclerAdapter
                                 holder.person.setText("Seller: " + seller);
                             });
                 } else {
+                    // You were the seller -> show buyer.
                     usersDbRef.child(item.getBuyerId()).child("name")
                             .get()
                             .addOnSuccessListener(snapshot -> {
@@ -207,6 +288,7 @@ public class TransactionRecyclerAdapter
                 break;
         }
 
+        // Tap the card to open full details.
         holder.itemView.setOnClickListener(v -> {
             android.content.Context ctx = holder.itemView.getContext();
             android.content.Intent intent =
@@ -215,6 +297,7 @@ public class TransactionRecyclerAdapter
             ctx.startActivity(intent);
         });
 
+        // The "Details" button does the same thing as tapping the card.
         if (holder.detailsButton != null) {
             holder.detailsButton.setVisibility(View.VISIBLE);
             holder.detailsButton.setOnClickListener(v -> {
@@ -227,6 +310,9 @@ public class TransactionRecyclerAdapter
         }
     }
 
+    /**
+     * Returns the number of items in the current list.
+     */
     @Override
     public int getItemCount() {
         return itemsList.size();
