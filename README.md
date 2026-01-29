@@ -28,8 +28,8 @@ Android application that creates a platform for users to post & purchase items. 
 <a href="images/initialScreen.png">
   <img src="images/initialScreen.png" width="200">
 </a>
-<a href="images/initialScreenLdscp.png">
-  <img src="images/initialScreenLdscp.png" height="200">
+<a href="images/initalScreenLdscp.png">
+  <img src="images/initalScreenLdscp.png" height="200">
 </a>
 
 #### Account Registration Screen
