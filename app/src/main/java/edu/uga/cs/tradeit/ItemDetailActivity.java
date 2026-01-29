@@ -12,25 +12,46 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
+/**
+ * This screen shows all the details about a single item.
+ *
+ * It:
+ * - loads the item data from Firebase
+ * - shows name, category, price, status, seller, and description
+ * - lets the seller edit or delete the item (if available)
+ * - lets a buyer request the item and complete the transaction
+ */
 public class ItemDetailActivity extends AppCompatActivity {
 
+    // text fields on the screen
     private TextView nameTV, categoryTV, priceTV, statusTV,
             sellerNameTV, sellerEmailTV, descTV;
+    // buttons for actions
     private Button actionButton, editButton, deleteButton;
 
+    // references to different parts of the Firebase database
     private DatabaseReference itemsRef;
     private DatabaseReference usersRef;
     private DatabaseReference categoriesRef;
 
+    // key of the item we are showing
     private String itemKey;
+    // the current Item object we loaded
     private Item currentItem;
+    // id of the currently logged-in user
     private String currentUid;
 
+    /**
+     * Called when this screen is created.
+     * Sets up the layout, finds all views, connects to Firebase,
+     * and starts loading the item details.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_item_detail);
 
+        // connect Java variables to views in the layout
         nameTV = findViewById(R.id.detailNameTextView);
         categoryTV = findViewById(R.id.detailCategoryTextView);
         priceTV = findViewById(R.id.detailPriceTextView);
@@ -42,11 +63,13 @@ public class ItemDetailActivity extends AppCompatActivity {
         editButton = findViewById(R.id.detailEditButton);
         deleteButton = findViewById(R.id.detailDeleteButton);
 
+        // get database references
         itemsRef = FirebaseDatabase.getInstance().getReference("items");
         usersRef = FirebaseDatabase.getInstance().getReference("users");
         categoriesRef = FirebaseDatabase.getInstance().getReference("categories");
         currentUid = FirebaseAuth.getInstance().getUid();
 
+        // get the itemKey passed from the previous screen
         itemKey = getIntent().getStringExtra("itemKey");
         if (itemKey == null) {
             Toast.makeText(this, "No item specified", Toast.LENGTH_SHORT).show();
@@ -57,10 +80,18 @@ public class ItemDetailActivity extends AppCompatActivity {
         loadItemDetails();
     }
 
+    /**
+     * Small helper to reload the item info.
+     * This is called after editing so the screen refreshes.
+     */
     public void reloadItem() {
         loadItemDetails();
     }
 
+    /**
+     * Loads the item from Firebase using itemKey,
+     * then binds it to the screen and loads seller info.
+     */
     private void loadItemDetails() {
         itemsRef.child(itemKey)
                 .get()
@@ -82,11 +113,16 @@ public class ItemDetailActivity extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Takes the currentItem data and shows it in the TextViews.
+     * Also sets up buttons based on who the user is and item status.
+     */
     private void bindItemToUI() {
         if (currentItem == null) return;
 
         nameTV.setText(currentItem.getName() == null ? "" : currentItem.getName());
 
+        // show category name (look it up from the category id)
         String catId = currentItem.getCategoryId();
         if (catId == null || catId.isEmpty()) {
             categoryTV.setText("Category: None");
@@ -102,6 +138,7 @@ public class ItemDetailActivity extends AppCompatActivity {
                             categoryTV.setText("Category: Unknown"));
         }
 
+        // show price or "Free"
         double p = currentItem.getPrice();
         if (p == 0.0) {
             priceTV.setText("Price: Free");
@@ -109,10 +146,12 @@ public class ItemDetailActivity extends AppCompatActivity {
             priceTV.setText("Price: $" + String.format("%.2f", p));
         }
 
+        // show status (available / pending / completed)
         String status = currentItem.getStatus();
         if (status == null) status = "unknown";
         statusTV.setText("Status: " + status);
 
+        // show description or default text
         String desc = currentItem.getDescription();
         if (desc == null || desc.isEmpty()) {
             descTV.setText("No description provided.");
@@ -120,10 +159,16 @@ public class ItemDetailActivity extends AppCompatActivity {
             descTV.setText(desc);
         }
 
+        // decide if the edit/delete buttons should be visible
         setupOwnerButtons();
+        // decide what the main action button should do
         setupActionButton();
     }
 
+    /**
+     * Loads the seller's name and email from Firebase
+     * and shows them under the item details.
+     */
     private void loadSellerInfo(String sellerId) {
         if (sellerId == null) {
             sellerNameTV.setText("Seller: Unknown");
@@ -151,6 +196,11 @@ public class ItemDetailActivity extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Shows or hides the Edit and Delete buttons depending on:
+     * - if the current user is the seller
+     * - if the item is still available
+     */
     private void setupOwnerButtons() {
         if (editButton == null || deleteButton == null || currentItem == null) return;
 
@@ -163,12 +213,14 @@ public class ItemDetailActivity extends AppCompatActivity {
             editButton.setVisibility(View.VISIBLE);
             deleteButton.setVisibility(View.VISIBLE);
 
+            // open the edit dialog when seller taps edit
             editButton.setOnClickListener(v -> {
                 EditItemDialogFragment dialog =
                         EditItemDialogFragment.newInstance(currentItem.getKey());
                 dialog.show(getSupportFragmentManager(), "EditItemDialog");
             });
 
+            // let seller delete the item
             deleteButton.setOnClickListener(v -> deleteItem());
         } else {
             editButton.setVisibility(View.GONE);
@@ -176,6 +228,12 @@ public class ItemDetailActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Sets up the big action button at the bottom.
+     * What it does depends on:
+     * - item status (available/pending/completed)
+     * - if user is seller, buyer, or someone else
+     */
     private void setupActionButton() {
         actionButton.setEnabled(false);
         actionButton.setVisibility(View.GONE);
@@ -189,6 +247,7 @@ public class ItemDetailActivity extends AppCompatActivity {
         boolean isSeller = currentUid.equals(sellerId);
         boolean isBuyer = buyerId != null && currentUid.equals(buyerId);
 
+        // if item is free to request
         if ("available".equals(status)) {
             if (!isSeller) {
                 actionButton.setVisibility(View.VISIBLE);
@@ -197,6 +256,7 @@ public class ItemDetailActivity extends AppCompatActivity {
                 actionButton.setOnClickListener(v -> requestItem());
             }
         } else if ("pending".equals(status)) {
+            // only seller or buyer should see controls in pending state
             if (!(isSeller || isBuyer)) {
                 return;
             }
@@ -230,10 +290,15 @@ public class ItemDetailActivity extends AppCompatActivity {
                 }
             }
         } else if ("completed".equals(status)) {
+            // nothing to do if already completed
             actionButton.setVisibility(View.GONE);
         }
     }
 
+    /**
+     * Called when a buyer taps "Request Item".
+     * It marks the item as pending and sets the buyer in Firebase.
+     */
     private void requestItem() {
         if (currentUid == null || currentItem == null) return;
 
@@ -247,6 +312,7 @@ public class ItemDetailActivity extends AppCompatActivity {
                     Toast.makeText(this,
                             "Item requested",
                             Toast.LENGTH_SHORT).show();
+                    // update local copy and refresh UI
                     currentItem.setBuyerId(currentUid);
                     currentItem.setStatus("pending");
                     currentItem.setBuyerConfirmed(false);
@@ -259,6 +325,11 @@ public class ItemDetailActivity extends AppCompatActivity {
                                 Toast.LENGTH_SHORT).show());
     }
 
+    /**
+     * Called when buyer or seller taps "Complete Transaction".
+     * It sets their confirmed flag. If both sides are confirmed,
+     * the item becomes "completed".
+     */
     private void completeTransaction() {
         if (currentItem == null || currentUid == null) return;
 
@@ -302,6 +373,10 @@ public class ItemDetailActivity extends AppCompatActivity {
                                 Toast.LENGTH_SHORT).show());
     }
 
+    /**
+     * Lets the seller delete the item, but only if it's still "available".
+     * If delete works, the activity closes and goes back to previous screen.
+     */
     private void deleteItem() {
         if (currentItem == null) return;
 
