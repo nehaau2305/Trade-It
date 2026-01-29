@@ -25,38 +25,100 @@ Android application that creates a platform for users to post & purchase items. 
 
 ## Screenshots
 #### Initial Screen
-
+<a href="images/initialScreen.png">
+  <img src="images/initialScreen.png" width="200">
+</a>
+<a href="images/initialScreenLdscp.png">
+  <img src="images/initialScreenLdscp.png" height="200">
+</a>
 
 #### Account Registration Screen
-
+<a href="images/register.png">
+  <img src="images/register.png" width="200">
+</a>
+<a href="images/registerLdscp.png">
+  <img src="images/registerLdscp.png" height="200">
+</a>
 
 #### Login Screen
-
+<a href="images/login.png">
+  <img src="images/login.png" width="200">
+</a>
+<a href="images/loginLdscp.png">
+  <img src="images/loginLdscp.png" height="200">
+</a>
 
 #### Authenticated Home Screen
-
+<a href="images/home.png">
+  <img src="images/home.png" width="200">
+</a>
+<a href="images/homeLdscp.png">
+  <img src="images/homeLdscp.png" height="200">
+</a>
 
 #### My Items Screen
-
+<a href="images/myItems.png">
+  <img src="images/myItems.png" width="200">
+</a>
+<a href="images/myItemsLdscp.png">
+  <img src="images/myItemsLdscp.png" height="200">
+</a>
 
 #### My Categories Screen
-
+<a href="images/myCategories.png">
+  <img src="images/myCategories.png" width="200">
+</a>
+<a href="images/myCategoriesLdscp.png">
+  <img src="images/myCategoriesLdscp.png" height="200">
+</a>
 
 #### Transactions Screen
-
+<a href="images/buying.png">
+  <img src="images/buying.png" width="200">
+</a>
+<a href="images/selling.png">
+  <img src="images/selling.png" width="200">
+</a>
+<a href="images/completed.png">
+  <img src="images/completed.png" width="200">
+</a>
+<a href="images/completedLdscp.png">
+  <img src="images/completedLdscp.png" height="200">
+</a>
 
 #### Add Item Dialog Fragment
-
+<a href="images/addItem.png">
+  <img src="images/addItem.png" width="200">
+</a>
+<a href="images/addItemLdscp.png">
+  <img src="images/addItemLdscp.png" height="200">
+</a>
 
 #### Edit Item Dialog Fragment
-
+<a href="images/editItem.png">
+  <img src="images/editItem.png" width="200">
+</a>
+<a href="images/editItemLdscp.png">
+  <img src="images/editItemLdscp.png" height="200">
+</a>
 
 #### View Item Details
-
+<a href="images/requestItem.png">
+  <img src="images/requestItem.png" width="200">
+</a>
+<a href="images/requestItemLdscp.png">
+  <img src="images/requestItemLdscp.png" height="200">
+</a>
 
 #### Add Category Dialog Fragment
+<a href="images/addCategory.png">
+  <img src="images/addCategory.png" width="200">
+</a>
 
-
+#### View Available Categories
+<a href="images/viewCategories.png">
+  <img src="images/viewCategories.png" width="200">
+</a>
 
 ## Prerequisites
 - Android Studio installed (version 2025.1.4 or newer)
