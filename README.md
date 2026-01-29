@@ -97,10 +97,7 @@ Android application that creates a platform for users to post & purchase items. 
 #### Edit Item Dialog Fragment
 <a href="images/editItem.png">
   <img src="images/editItem.png" width="200">
-</a>
-<a href="images/editItemLdscp.png">
-  <img src="images/editItemLdscp.png" height="200">
-</a>
+</a
 
 #### View Item Details
 <a href="images/requestItem.png">
@@ -118,6 +115,11 @@ Android application that creates a platform for users to post & purchase items. 
 #### View Available Categories
 <a href="images/viewCategories.png">
   <img src="images/viewCategories.png" width="200">
+</a>
+
+#### Edit Category Dialog Fragment
+<a href="images/editCategory.png">
+  <img src="images/editCategory.png" width="200">
 </a>
 
 ## Prerequisites
