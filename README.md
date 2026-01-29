@@ -28,8 +28,8 @@ Android application that creates a platform for users to post & purchase items. 
 <a href="images/initialScreen.png">
   <img src="images/initialScreen.png" width="200">
 </a>
-<a href="images/initalScreenLdscp.png">
-  <img src="images/initalScreenLdscp.png" height="200">
+<a href="images/initialScreenLdscp.png">
+  <img src="images/initialScreenLdscp.png" height="200">
 </a>
 
 #### Account Registration Screen
@@ -97,7 +97,7 @@ Android application that creates a platform for users to post & purchase items. 
 #### Edit Item Dialog Fragment
 <a href="images/editItem.png">
   <img src="images/editItem.png" width="200">
-</a
+</a>
 
 #### View Item Details
 <a href="images/requestItem.png">
